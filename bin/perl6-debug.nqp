@@ -19,7 +19,22 @@ class Perl6::DebugHooks {
     }
 }
 
-class Perl6::HookInstaller is Perl6::Actions {
+class Perl6::HookGrammar is Perl6::Grammar {
+    my %seen_files;
+    
+    method statementlist() {
+        my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
+        unless nqp::existskey(%seen_files, $file) {
+            if $*DEBUG_HOOKS.has_hook('new_file') {
+                $*DEBUG_HOOKS.get_hook('new_file')($file, self.MATCH.orig);
+            }
+            %seen_files{$file} := 1;
+        }
+        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
+    }
+}
+
+class Perl6::HookActions is Perl6::Actions {
     method statement($/) {
         Perl6::Actions.statement($/);
         my $stmt := $/.ast;
@@ -54,8 +69,8 @@ sub MAIN(@ARGS) {
     # Create and configure compiler object.
     my $comp := Perl6::Compiler.new();
     $comp.language('perl6');
-    $comp.parsegrammar(Perl6::Grammar);
-    $comp.parseactions(Perl6::HookInstaller);
+    $comp.parsegrammar(Perl6::HookGrammar);
+    $comp.parseactions(Perl6::HookActions);
     $comp.addstage('syntaxcheck', :before<past>);
     $comp.addstage('optimize', :before<post>);
     hll-config($comp.config);
