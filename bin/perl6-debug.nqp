@@ -2,6 +2,40 @@ use Perl6::Grammar;
 use Perl6::Actions;
 use Perl6::Compiler;
 
+class Perl6::DebugHooks {
+    has %!hooks;
+    
+    method set_hook($name, $callback) {
+        $*W.add_object($callback);
+        %!hooks{$name} := $callback;
+    }
+    
+    method has_hook($name) {
+        nqp::existskey(%!hooks, $name)
+    }
+    
+    method get_hook($name) {
+        %!hooks{$name}
+    }
+}
+
+class Perl6::HookInstaller is Perl6::Actions {
+    method statement($/) {
+        Perl6::Actions.statement($/);
+        my $stmt := $/.ast;
+        if $*DEBUG_HOOKS.has_hook('statement') {
+            $/.'!make'(QAST::Stmts.new(
+                QAST::Op.new(
+                    :op('call'),
+                    QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement')) ),
+                    $*W.add_string_constant(~$/)
+                ),
+                $stmt
+            ));
+        }
+    }
+}
+
 sub hll-config($config) {
     $config<name>           := 'rakudo';
     $config<version>        := '';
@@ -21,7 +55,7 @@ sub MAIN(@ARGS) {
     my $comp := Perl6::Compiler.new();
     $comp.language('perl6');
     $comp.parsegrammar(Perl6::Grammar);
-    $comp.parseactions(Perl6::Actions);
+    $comp.parseactions(Perl6::HookInstaller);
     $comp.addstage('syntaxcheck', :before<past>);
     $comp.addstage('optimize', :before<post>);
     hll-config($comp.config);
@@ -39,6 +73,15 @@ sub MAIN(@ARGS) {
     
     # Set up END block list, which we'll run at exit.
     my @*END_PHASERS := [];
+    
+    # Force loading of the debugger module.
+    my $pname := @ARGS.shift();
+    @ARGS.unshift('-Ilib');
+    @ARGS.unshift('-MDebugger::UI::CommandLine');
+    @ARGS.unshift($pname);
+    
+    # Set up debug hooks object.
+    my $*DEBUG_HOOKS := Perl6::DebugHooks.new();
 
     # Enter the compiler.
     $comp.command_line(@ARGS, :encoding('utf8'), :transcode('ascii iso-8859-1'));
