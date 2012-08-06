@@ -1,0 +1,10 @@
+*.pir
+*.pbc
+*.exe
+*.pdb
+*.c
+*.exp
+*.obj
+*.lib
+*.rc
+*.res
