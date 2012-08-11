@@ -38,15 +38,19 @@ class Perl6::HookActions is Perl6::Actions {
     method statement($/) {
         Perl6::Actions.statement($/);
         my $stmt := $/.ast;
-        if $*DEBUG_HOOKS.has_hook('statement') {
-            $/.'!make'(QAST::Stmts.new(
-                QAST::Op.new(
-                    :op('call'),
-                    QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement')) ),
-                    $*W.add_string_constant(~$/)
-                ),
-                $stmt
-            ));
+        if $<EXPR> {
+            if $*DEBUG_HOOKS.has_hook('statement_expr') {
+                $/.'!make'(QAST::Stmts.new(
+                    QAST::Op.new(
+                        :op('call'),
+                        QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_expr')) ),
+                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                        $*W.add_numeric_constant('Int', $/.from),
+                        $*W.add_numeric_constant('Int', $/.to)
+                    ),
+                    $stmt
+                ));
+            }
         }
     }
 }
