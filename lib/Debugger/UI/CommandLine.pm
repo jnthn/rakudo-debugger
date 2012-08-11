@@ -67,19 +67,51 @@ my class DebugState {
                 when '' {
                     return;
                 }
-                when /< p print s say > \s+ (.+)/ {
+                when /^ < p print s say > \s+ (.+)/ {
                     say self.eval_in_ctx($ctx, ~$0);
-                    #CATCH {
-                    #    default {
-                    #        say colored($_.message, 'red');
-                    #    }
-                    #}
+                    CATCH {
+                        default {
+                            say colored($_.message, 'red');
+                        }
+                    }
+                }
+                when /^ < e eval > \s+ (.+)/ {
+                    self.eval_in_ctx($ctx, ~$0);
+                    CATCH {
+                        default {
+                            say colored($_.message, 'red');
+                        }
+                    }
+                }
+                when /^ (< $ @ % > .+)/ {
+                    say self.eval_in_ctx($ctx, ~$0).perl;
+                    CATCH {
+                        default {
+                            say colored($_.message, 'red');
+                        }
+                    }
+                }
+                when '?' | 'h' | 'help' {
+                    say self.usage()
+                }
+                when 'q' | 'quit' {
+                    exit(0);
                 }
                 default {
                     say "Sorry, I don't understand"
                 }
             }
         }
+    }
+    
+    method usage() {
+        join "\n",
+            '<enter>            single step',
+            's[ay], p[rint]     evaluate and display an expression in the current scope',
+            'e[val]             evaluate an expression in the current scope',
+            '$s, @a, %h         show .perl of the a variable in scope (indexing allowed)',
+            'q[uit]             exit the debugger'
+            ;
     }
 }
 
