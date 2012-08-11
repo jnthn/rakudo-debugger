@@ -4,6 +4,7 @@ use Perl6::Compiler;
 
 class Perl6::DebugHooks {
     has %!hooks;
+    has $!suspended;
     
     method set_hook($name, $callback) {
         $*W.add_object($callback);
@@ -11,12 +12,27 @@ class Perl6::DebugHooks {
     }
     
     method has_hook($name) {
-        nqp::existskey(%!hooks, $name)
+        !$!suspended && nqp::existskey(%!hooks, $name)
     }
     
     method get_hook($name) {
         %!hooks{$name}
     }
+    
+    method suspend() {
+        $!suspended := 1
+    }
+    
+    method unsuspend() {
+        $!suspended := 0
+    }
+}
+
+sub ps_qast() {
+    QAST::Op.new(
+        :op('callmethod'), :name('new'),
+        QAST::WVal.new( :value($*W.find_symbol(['PseudoStash'])) )
+    )
 }
 
 class Perl6::HookGrammar is Perl6::Grammar {
@@ -45,6 +61,7 @@ class Perl6::HookActions is Perl6::Actions {
                         :op('call'),
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
                         $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                        ps_qast(),
                         $*W.add_numeric_constant('Int', $/.from),
                         $*W.add_numeric_constant('Int', $/.to)
                     ),
@@ -64,6 +81,7 @@ class Perl6::HookActions is Perl6::Actions {
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
                     $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                    ps_qast(),
                     $*W.add_string_constant('if'),
                     $*W.add_numeric_constant('Int', $expr.from),
                     $*W.add_numeric_constant('Int', $expr.to)
@@ -82,6 +100,7 @@ class Perl6::HookActions is Perl6::Actions {
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
                     $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                    ps_qast(),
                     $*W.add_string_constant(~$<sym>),
                     $*W.add_numeric_constant('Int', $expr.from),
                     $*W.add_numeric_constant('Int', $expr.to)

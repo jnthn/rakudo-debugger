@@ -50,16 +50,49 @@ my class SourceFile {
     }
 }
 
+my class DebugState {
+    method eval_in_ctx($ctx, $code) {
+        ENTER $*DEBUG_HOOKS.suspend();
+        LEAVE $*DEBUG_HOOKS.unsuspend();
+        my $compiler := pir::compreg__PS('perl6');
+        my $vm_ctx   := nqp::getattr(nqp::p6decont($ctx), PseudoStash, '$!ctx');
+        my $pbc      := $compiler.compile($code, :outer_ctx($vm_ctx), :global(GLOBAL));
+        nqp::atpos($pbc, 0).set_outer_ctx($vm_ctx);
+        $pbc();
+    }
+    
+    method issue_prompt($ctx) {
+        loop {
+            given prompt("> ") {
+                when '' {
+                    return;
+                }
+                when /< p print s say > \s+ (.+)/ {
+                    say self.eval_in_ctx($ctx, ~$0);
+                    #CATCH {
+                    #    default {
+                    #        say colored($_.message, 'red');
+                    #    }
+                    #}
+                }
+                default {
+                    say "Sorry, I don't understand"
+                }
+            }
+        }
+    }
+}
+
 # Install various hooks.
 $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
     say colored('>>> LOADING ', 'magenta') ~ $filename;
     %sources{$filename} = SourceFile.new(:$filename, :$source);
 });
-$*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $from, $to {
+$*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
     say %sources{$filename}.summary_around($from, $to);
-    prompt("> ");
+    DebugState.issue_prompt($ctx);
 });
-$*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $type, $from, $to {
+$*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
     say %sources{$filename}.summary_around($from, $to);
-    prompt("> ");
+    DebugState.issue_prompt($ctx);
 });
