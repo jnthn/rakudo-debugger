@@ -37,13 +37,13 @@ class Perl6::HookGrammar is Perl6::Grammar {
 class Perl6::HookActions is Perl6::Actions {
     method statement($/) {
         Perl6::Actions.statement($/);
-        my $stmt := $/.ast;
         if $<EXPR> {
-            if $*DEBUG_HOOKS.has_hook('statement_expr') {
+            my $stmt := $/.ast;
+            if $*DEBUG_HOOKS.has_hook('statement_simple') {
                 $/.'!make'(QAST::Stmts.new(
                     QAST::Op.new(
                         :op('call'),
-                        QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_expr')) ),
+                        QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
                         $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
                         $*W.add_numeric_constant('Int', $/.from),
                         $*W.add_numeric_constant('Int', $/.to)
@@ -52,6 +52,68 @@ class Perl6::HookActions is Perl6::Actions {
                 ));
             }
         }
+    }
+    
+    method statement_control:sym<if>($/) {
+        Perl6::Actions.statement_control:sym<if>($/);
+        my $stmt := $/.ast;
+        if $*DEBUG_HOOKS.has_hook('statement_cond') {
+            my $expr := $<xblock>[0]<EXPR>;
+            $/.'!make'(QAST::Stmts.new(
+                QAST::Op.new(
+                    :op('call'),
+                    QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
+                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                    $*W.add_string_constant('if'),
+                    $*W.add_numeric_constant('Int', $expr.from),
+                    $*W.add_numeric_constant('Int', $expr.to)
+                ),
+                $stmt
+            ));
+        }
+    }
+    
+    sub simple_xblock_hook($/) {
+        my $stmt := $/.ast;
+        if $*DEBUG_HOOKS.has_hook('statement_cond') {
+            my $expr := $<xblock><EXPR>;
+            $/.'!make'(QAST::Stmts.new(
+                QAST::Op.new(
+                    :op('call'),
+                    QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
+                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                    $*W.add_string_constant(~$<sym>),
+                    $*W.add_numeric_constant('Int', $expr.from),
+                    $*W.add_numeric_constant('Int', $expr.to)
+                ),
+                $stmt
+            ));
+        }
+    }
+    
+    method statement_control:sym<unless>($/) {
+        Perl6::Actions.statement_control:sym<unless>($/);
+        simple_xblock_hook($/);
+    }
+    
+    method statement_control:sym<while>($/) {
+        Perl6::Actions.statement_control:sym<while>($/);
+        simple_xblock_hook($/);
+    }
+    
+    method statement_control:sym<for>($/) {
+        Perl6::Actions.statement_control:sym<for>($/);
+        simple_xblock_hook($/);
+    }
+    
+    method statement_control:sym<given>($/) {
+        Perl6::Actions.statement_control:sym<given>($/);
+        simple_xblock_hook($/);
+    }
+    
+    method statement_control:sym<when>($/) {
+        Perl6::Actions.statement_control:sym<when>($/);
+        simple_xblock_hook($/);
     }
 }
 

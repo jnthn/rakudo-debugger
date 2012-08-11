@@ -39,7 +39,7 @@ my class SourceFile {
         }
         else {
             my $ctx_start = $from_line - 2;
-            $ctx_start = 0 if $from_line < 0;
+            $ctx_start = 0 if $ctx_start < 0;
             my $ctx_end = $to_line + 2;
             $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
             return
@@ -55,7 +55,11 @@ $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
     say colored('>>> LOADING ', 'magenta') ~ $filename;
     %sources{$filename} = SourceFile.new(:$filename, :$source);
 });
-$*DEBUG_HOOKS.set_hook('statement_expr', -> $filename, $from, $to {
+$*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $from, $to {
+    say %sources{$filename}.summary_around($from, $to);
+    prompt("> ");
+});
+$*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $type, $from, $to {
     say %sources{$filename}.summary_around($from, $to);
     prompt("> ");
 });
