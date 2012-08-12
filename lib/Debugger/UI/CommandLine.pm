@@ -179,7 +179,7 @@ my class DebugState {
     
     method usage() {
         join "\n",
-            '<enter>            single step',
+            ('<enter>            single step' unless $dying),
             's[ay], p[rint]     evaluate and display an expression in the current scope',
             'e[val]             evaluate an expression in the current scope',
             '$s, @a, %h         show .perl of the a variable in scope (indexing allowed)',
