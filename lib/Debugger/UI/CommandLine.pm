@@ -14,12 +14,13 @@ my class SourceFile {
     
     method BUILD(:$!filename, :$!source) {
         # Store (abbreviated if needed) lines.
-        @!lines = lines($!source).map(*.subst("\r", "")).map(-> $l {
+        $!source .= subst("\r", "", :g);
+        @!lines = lines($!source).map(-> $l {
             $l.chars > 79 ?? $l.substr(0, 76) ~ '...' !! $l
         });
         
         # Calculate line offsets.
-        for $!source.match(/^^ \N+ $$/, :g) -> $m {
+        for $!source.match(/^^ \N* $$/, :g) -> $m {
             @!line_offsets.push($m.from);
         }
     }
