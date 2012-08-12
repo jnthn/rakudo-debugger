@@ -26,13 +26,13 @@ my class SourceFile {
     
     method line_of($pos) {
         for @!line_offsets.kv -> $l, $p {
-            return $l - 1 if $p >= $pos;
+            return $l - 1 if $p > $pos;
         }
     }
     
     method summary_around($from, $to) {
-        my $from_line = self.line_of($from);
-        my $to_line = self.line_of($to);
+        my $from_line = self.line_of($from) || 0;
+        my $to_line = self.line_of($to) || $from_line;
         if $to_line - $from_line > 5 {
             $to_line = $from_line + 4;
             return colored(join("\n", @!lines[$from_line..$to_line]), 'black on_yellow');
