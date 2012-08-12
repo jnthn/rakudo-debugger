@@ -14,40 +14,76 @@ my class SourceFile {
     
     method BUILD(:$!filename, :$!source) {
         # Store (abbreviated if needed) lines.
-        $!source .= subst("\r", "", :g);
         @!lines = lines($!source).map(-> $l {
-            $l.chars > 79 ?? $l.substr(0, 76) ~ '...' !! $l
+            $l.chars > 77 ?? $l.substr(0, 74) ~ '...' !! $l
         });
         
         # Calculate line offsets.
-        for $!source.match(/^^ \N* $$/, :g) -> $m {
+        for $!source.match(/\N* \r?\n/, :g) -> $m {
             @!line_offsets.push($m.from);
+        }
+        @!line_offsets.push($!source.chars);
+    }
+    
+    method line_of($pos, $def_line, $def_pos) {
+        my $last_p = 0;
+        for @!line_offsets.kv -> $l, $p {
+            if $p > $pos {
+                return ($l - 1, abs($pos - $last_p));
+            }
+            $last_p = $p;
+        }
+        return ($def_line, $def_pos)
+    }
+    
+    sub normal_lines(@lines) {
+        @lines.map: {
+            colored('| ', 'blue') ~ $_.subst("\r", "")
         }
     }
     
-    method line_of($pos) {
-        for @!line_offsets.kv -> $l, $p {
-            return $l - 1 if $p > $pos;
+    sub highlighted_lines(@lines, $start_line_pos, $end_line_pos) {
+        @lines.map: {
+            state $line = 0;
+            NEXT $line++;
+            my $safe_start_pos = [min] $start_line_pos, .chars - 1;
+            my $safe_end_pos   = [min] $end_line_pos, .chars - 1;
+            my $rendered       = colored('| ', 'blue');
+            if $line == 0 && $line == @lines.end {
+                $rendered ~= .substr(0, $safe_start_pos);
+                $rendered ~= colored(
+                    .substr($safe_start_pos, $safe_end_pos - $safe_start_pos),
+                    'bold yellow');
+                $rendered ~= .substr($safe_end_pos);
+            }
+            elsif $line == 0 {
+                $rendered ~= .substr(0, $safe_start_pos);
+                $rendered ~= colored(.substr($safe_start_pos), 'bold yellow');
+            }
+            elsif $line == @lines.end {
+                $rendered ~= colored(
+                    .substr(0, $safe_end_pos),
+                    'bold yellow');
+                $rendered ~= .substr($safe_end_pos);
+            }
+            else {
+                $rendered ~= colored($_, 'bold yellow');
+            }
+            $rendered.subst("\r", "")
         }
     }
     
     method summary_around($from, $to) {
-        my $from_line = self.line_of($from) || 0;
-        my $to_line = self.line_of($to) || $from_line;
-        if $to_line - $from_line > 5 {
-            $to_line = $from_line + 4;
-            return colored(join("\n", @!lines[$from_line..$to_line]), 'black on_yellow');
-        }
-        else {
-            my $ctx_start = $from_line - 2;
-            $ctx_start = 0 if $ctx_start < 0;
-            my $ctx_end = $to_line + 2;
-            $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
-            return
-                @!lines[$ctx_start..^$from_line].join("\n") ~ "\n" ~
-                colored(@!lines[$from_line..$to_line].join("\n"), 'bold yellow') ~ "\n" ~
-                @!lines[$to_line^..$ctx_end].join("\n");
-        }
+        my ($from_line, $from_pos) = self.line_of($from, 0, 0);
+        my ($to_line, $to_pos)     = self.line_of($to, $from_line, $from_pos);
+        my $ctx_start = $from_line - 2;
+        $ctx_start = 0 if $ctx_start < 0;
+        my $ctx_end = $to_line + 2;
+        $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
+        return join "\n",
+            normal_lines(@!lines[$ctx_start..^$from_line]),
+            highlighted_lines(@!lines[$from_line..$to_line], $from_pos, $to_pos),
+            normal_lines(@!lines[$to_line^..$ctx_end]);
     }
 }
 
