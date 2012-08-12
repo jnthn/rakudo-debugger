@@ -132,6 +132,7 @@ my class SourceFile {
 my class DebugState {
     my $dying = False;
     my $cur_ex;
+    my $in_prompt = False;
     
     method eval_in_ctx($ctx, $code) {
         ENTER $*DEBUG_HOOKS.suspend();
@@ -152,6 +153,10 @@ my class DebugState {
         $dying = True;
     }
     
+    method in_prompt() {
+        $in_prompt
+    }
+    
     method prompt_color() {
         $dying  ?? 'red'    !!
         $cur_ex ?? 'yellow' !!
@@ -159,6 +164,8 @@ my class DebugState {
     }
     
     method issue_prompt($ctx) {
+        ENTER $in_prompt = True;
+        LEAVE $in_prompt = False;
         loop {
             given prompt(colored('> ', self.prompt_color())) {
                 when '' {
@@ -196,8 +203,7 @@ my class DebugState {
                     }
                 }
                 when 'bt' | 'st' {
-                    my $skip_lines = $cur_ex && !$dying ?? 9 !! 4;
-                    say join "\n", lines(Backtrace.new().nice)[$skip_lines..*];
+                    say join "\n", lines(Backtrace.new().nice)[4..*];
                 }
                 when 'ex' {
                     if $cur_ex {
@@ -255,30 +261,37 @@ $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
 # Allow interception of throwing an exception.
 my $IN_UNHANDLED = 0;
 my $IN_THROWN = 0;
+my $CUR_EX;
 &EXCEPTION.wrap(-> |$ {
+    my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
     my $e = callsame;
-    unless $IN_UNHANDLED || $IN_THROWN {
+    unless $IN_UNHANDLED || $IN_THROWN || DebugState.in_prompt {
         $IN_THROWN = 1;
-        my $bt = $e.backtrace();
-        my $ctx = CALLER;
-        my ($file, $line);
-        for @$bt {
-            if %sources.exists(.file) {
-                $file = .file;
-                $line = .line;
-                last;
-            }
-            $ctx = $ctx.WHO.<CALLER>;
-        }
-        if $file {
-            DebugState.set_current_exception($e);
-            say %sources{$file}.throw_summary($e, $line - 1);
-            DebugState.issue_prompt($ctx.WHO);
-        }
+        $CUR_EX = $e;
+        pir::perl6_invoke_catchhandler__vPP(&thrown, $vm_ex);
         $IN_THROWN = 0;
     }
     $e
 });
+sub thrown(|$) {
+    my $e = $CUR_EX;
+    my $bt = $e.backtrace();
+    my $ctx = CALLER;
+    my ($file, $line);
+    for @$bt {
+        if %sources.exists(.file) {
+            $file = .file;
+            $line = .line;
+            last;
+        }
+        $ctx = $ctx.WHO.<CALLER>;
+    }
+    if $file {
+        DebugState.set_current_exception($e);
+        say %sources{$file}.throw_summary($e, $line - 1);
+        DebugState.issue_prompt($ctx.WHO);
+    }
+}
 
 # Override handler for uncaught exceptions.
 my Mu $p6comp := pir::compreg__Ps('perl6');
