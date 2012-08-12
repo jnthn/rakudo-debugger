@@ -111,6 +111,7 @@ my class SourceFile {
 # Holds the current state of the debugger.
 my class DebugState {
     my $dying = False;
+    my $cur_ex;
     
     method eval_in_ctx($ctx, $code) {
         ENTER $*DEBUG_HOOKS.suspend();
@@ -120,6 +121,10 @@ my class DebugState {
         my $pbc      := $compiler.compile($code, :outer_ctx($vm_ctx), :global(GLOBAL));
         nqp::atpos($pbc, 0).set_outer_ctx($vm_ctx);
         $pbc();
+    }
+    
+    method set_current_exception($ex) {
+        $cur_ex = $ex;
     }
     
     method enter_death_throes() {
@@ -164,6 +169,17 @@ my class DebugState {
                         }
                     }
                 }
+                when 'bt' | 'st' {
+                    say join "\n", lines(Backtrace.new().nice)[4..*]
+                }
+                when 'ex' {
+                    if $cur_ex {
+                        say $cur_ex.perl;
+                    }
+                    else {
+                        say colored('No current exception', 'red');
+                    }
+                }
                 when '?' | 'h' | 'help' {
                     say self.usage()
                 }
@@ -175,6 +191,11 @@ my class DebugState {
                 }
             }
         }
+        
+        # Clear current exception on leaving here, since going on with
+        # execution from an exception state leaves us in a non-exception
+        # state.
+        LEAVE $cur_ex = Nil;
     }
     
     method usage() {
@@ -183,6 +204,8 @@ my class DebugState {
             's[ay], p[rint]     evaluate and display an expression in the current scope',
             'e[val]             evaluate an expression in the current scope',
             '$s, @a, %h         show .perl of the a variable in scope (indexing allowed)',
+            'bt, st             show the backtrace from the current location',
+            ('ex                 show .perl of the current exception' if $cur_ex),
             'q[uit]             exit the debugger'
             ;
     }
@@ -224,6 +247,7 @@ sub unhandled(|$) {
     }
     if $file {
         DebugState.enter_death_throes();
+        DebugState.set_current_exception($e);
         say %sources{$file}.exception_summary($e, $line - 1);
         DebugState.issue_prompt($ctx.WHO);
     }
