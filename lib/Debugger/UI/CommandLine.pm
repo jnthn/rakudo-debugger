@@ -81,6 +81,7 @@ my class SourceFile {
         my $ctx_end = $to_line + 2;
         $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
         return join "\n",
+            colored("+ $!filename ($ctx_start - $ctx_end)", 'blue'),
             normal_lines(@!lines[$ctx_start..^$from_line]),
             highlighted_lines(@!lines[$from_line..$to_line], $from_pos, $to_pos),
             normal_lines(@!lines[$to_line^..$ctx_end]);
@@ -100,7 +101,7 @@ my class DebugState {
     
     method issue_prompt($ctx) {
         loop {
-            given prompt("> ") {
+            given prompt(colored('> ', 'blue')) {
                 when '' {
                     return;
                 }
