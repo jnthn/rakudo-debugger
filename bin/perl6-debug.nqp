@@ -51,11 +51,29 @@ class Perl6::HookGrammar is Perl6::Grammar {
 }
 
 class Perl6::HookActions is Perl6::Actions {
+    my %uninteresting := nqp::hash(
+        'package_declarator', 1,
+        'routine_declarator', 1,
+        'multi_declarator', 1
+    );
+    sub interesting_expr($e) {
+        my $accept := 1;
+        for $e.hash {
+            if %uninteresting{$_.key} {
+                $accept := 0;
+                last;
+            }
+        }
+        $accept
+    }
+    
     method statement($/) {
         Perl6::Actions.statement($/);
-        if $<EXPR> {
+        if $<EXPR> && interesting_expr($<EXPR>) {
             my $stmt := $/.ast;
-            if $*DEBUG_HOOKS.has_hook('statement_simple') {
+            my $pot_hash := nqp::istype($stmt, QAST::Op) &&
+                ($stmt.name eq '&infix:<,>' || $stmt.name eq '&infix:<=>>');
+            if !$pot_hash && $*DEBUG_HOOKS.has_hook('statement_simple') {
                 $/.'!make'(QAST::Stmts.new(
                     QAST::Op.new(
                         :op('call'),
