@@ -42,6 +42,12 @@ my class SourceFile {
         }
     }
     
+    sub throw_lines(@lines) {
+        @lines.map: {
+            colored('| ' ~ $_.subst("\r", ""), 'yellow')
+        }
+    }
+    
     sub error_lines(@lines) {
         @lines.map: {
             colored('| ' ~ $_.subst("\r", ""), 'red')
@@ -93,6 +99,20 @@ my class SourceFile {
             normal_lines(@!lines[$to_line^..$ctx_end], 'blue');
     }
     
+    method throw_summary($e, $line) {
+        my $ctx_start = $line - 2;
+        $ctx_start = 0 if $ctx_start < 0;
+        my $ctx_end = $line + 2;
+        $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
+        return join "\n",
+            colored("+ Exception Thrown", 'yellow'),
+            colored('| ', 'yellow') ~ $e.message,
+            colored("+ $!filename ($ctx_start - $ctx_end)", 'yellow'),
+            normal_lines(@!lines[$ctx_start..^$line], 'yellow'),
+            throw_lines([@!lines[$line]]),
+            normal_lines(@!lines[$line^..$ctx_end], 'yellow');
+    }
+    
     method exception_summary($e, $line) {
         my $ctx_start = $line - 2;
         $ctx_start = 0 if $ctx_start < 0;
@@ -132,9 +152,15 @@ my class DebugState {
         $dying = True;
     }
     
+    method prompt_color() {
+        $dying  ?? 'red'    !!
+        $cur_ex ?? 'yellow' !!
+                   'blue'
+    }
+    
     method issue_prompt($ctx) {
         loop {
-            given prompt(colored('> ', $dying ?? 'red' !! 'blue')) {
+            given prompt(colored('> ', self.prompt_color())) {
                 when '' {
                     if $dying {
                         say colored(
@@ -170,7 +196,8 @@ my class DebugState {
                     }
                 }
                 when 'bt' | 'st' {
-                    say join "\n", lines(Backtrace.new().nice)[4..*]
+                    my $skip_lines = $cur_ex && !$dying ?? 9 !! 4;
+                    say join "\n", lines(Backtrace.new().nice)[$skip_lines..*];
                 }
                 when 'ex' {
                     if $cur_ex {
@@ -225,6 +252,34 @@ $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
     DebugState.issue_prompt($ctx);
 });
 
+# Allow interception of throwing an exception.
+my $IN_UNHANDLED = 0;
+my $IN_THROWN = 0;
+&EXCEPTION.wrap(-> |$ {
+    my $e = callsame;
+    unless $IN_UNHANDLED || $IN_THROWN {
+        $IN_THROWN = 1;
+        my $bt = $e.backtrace();
+        my $ctx = CALLER;
+        my ($file, $line);
+        for @$bt {
+            if %sources.exists(.file) {
+                $file = .file;
+                $line = .line;
+                last;
+            }
+            $ctx = $ctx.WHO.<CALLER>;
+        }
+        if $file {
+            DebugState.set_current_exception($e);
+            say %sources{$file}.throw_summary($e, $line - 1);
+            DebugState.issue_prompt($ctx.WHO);
+        }
+        $IN_THROWN = 0;
+    }
+    $e
+});
+
 # Override handler for uncaught exceptions.
 my Mu $p6comp := pir::compreg__Ps('perl6');
 $p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> |$ {
@@ -232,6 +287,7 @@ $p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> |$ {
     pir::perl6_invoke_catchhandler__vPP(&unhandled, $vm_ex);
 });
 sub unhandled(|$) {
+    $IN_UNHANDLED = 1;
     my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
     my $e = EXCEPTION($vm_ex);
     my $bt = $e.backtrace();
