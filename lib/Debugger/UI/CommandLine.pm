@@ -134,6 +134,7 @@ my class DebugState {
     my RunMode $run_mode  = Step;
     my Bool    $dying     = False;
     my Bool    $in_prompt = False;
+    my %breakpoints;
     my $cur_ex;
     
     method eval_in_ctx($ctx, $code) {
@@ -159,8 +160,52 @@ my class DebugState {
         $in_prompt
     }
     
+    method normalize_filename($file) {
+        if %sources.exists($file) {
+            return $file;
+        }
+        else {
+            my $try_file = $file.subst(/'::'/, '/', :g);
+            for %sources.keys -> $known {
+                if $known ~~ /$try_file/ {
+                    return $known;
+                }
+            }
+        }
+        return Nil;
+    }
+    
+    method add_breakpoint($file, $line) {
+        if self.normalize_filename($file) -> $norm_file {
+            push %breakpoints{$norm_file}, $line - 1;
+        }
+        else {
+            say colored("Cannot add breakpoint to unknown file '$file'", 'red');
+        }
+    }
+    
+    method remove_breakpoint($file, $line) {
+        if self.normalize_filename($file) -> $norm_file {
+            if %breakpoints{$norm_file} {
+                my $rem_line = $line - 1;
+                if any(%breakpoints{$norm_file}.list) == $rem_line {
+                    %breakpoints{$norm_file} .= grep(* != $rem_line);
+                    return;
+                }
+            }
+            say colored("No breakpoint at line $line in $file", 'red');
+        }
+        else {
+            say colored("Cannot remove breakpoint from unknown file '$file'", 'red');
+        }
+    }
+    
     method is_breakpoint_at($filename, $from, $to) {
-        False
+        if %breakpoints{$filename} -> @bp_lines {
+            my ($from_line, $) = %sources{$filename}.line_of($from, -1, -1);
+            my ($to_line, $)   = %sources{$filename}.line_of($to, -1, -1);
+            return any(@bp_lines) ~~ $from_line..$to_line;
+        }
     }
     
     method should_break_at($filename, $from, $to) {
@@ -183,7 +228,7 @@ my class DebugState {
             'red');
     }
     
-    method issue_prompt($ctx) {
+    method issue_prompt($ctx, $cur_file) {
         ENTER $in_prompt = True;
         LEAVE $in_prompt = False;
         loop {
@@ -247,6 +292,23 @@ my class DebugState {
                         say colored('No current exception', 'red');
                     }
                 }
+                when /^ 'bp' <.ws> 'add' <.ws> [$<file>=[<-[:]>+] ':']? $<line>=[\d+] $/ {
+                    self.add_breakpoint($<file> ?? ~$<file> !! $cur_file, +$<line>);
+                }
+                when /^ 'bp' <.ws> 'list' $/ {
+                    for %breakpoints.kv -> $file, @lines {
+                        if @lines {
+                            say "$file:";
+                            say "    " ~ @lines.map(*+1).join(",");
+                        }
+                    }
+                }
+                when /^ 'bp' <.ws> 'rm' <.ws> [$<file>=[<-[:]>+] ':']? $<line>=[\d+] $/ {
+                    self.remove_breakpoint($<file> ?? ~$<file> !! $cur_file, +$<line>);
+                }
+                when /^ 'bp' <.ws> 'rm' <.ws> 'all' $/ {
+                    %breakpoints = ();
+                }
                 when '?' | 'h' | 'help' {
                     say self.usage()
                 }
@@ -275,6 +337,12 @@ my class DebugState {
             '$s, @a, %h         show .perl of the a variable in scope (indexing allowed)',
             'bt, st             show the backtrace from the current location',
             ('ex                 show .perl of the current exception' if $cur_ex),
+            'bp add file:line   adds a breakpoint at the specified file/line',
+            'bp add line        adds a breakpoint at the specified line in this file',
+            'bp list            lists all active breakpoints',
+            'bp rm file:line    removes the breakpoint at the specified file/line',
+            'bp rm line         removes the breakpoint at the specified line in this file',
+            'bp rm all          removes all breakpoints',
             'q[uit]             exit the debugger'
             ;
     }
@@ -288,13 +356,13 @@ $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to);
-        DebugState.issue_prompt($ctx);
+        DebugState.issue_prompt($ctx, $filename);
     }
 });
 $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to);
-        DebugState.issue_prompt($ctx);
+        DebugState.issue_prompt($ctx, $filename);
     }
 });
 
@@ -331,7 +399,7 @@ sub thrown(|$) {
     if $file {
         DebugState.set_current_exception($e);
         say %sources{$file}.throw_summary($e, $line - 1);
-        DebugState.issue_prompt($ctx.WHO);
+        DebugState.issue_prompt($ctx.WHO, $file);
     }
 }
 
@@ -360,7 +428,7 @@ sub unhandled(|$) {
         DebugState.enter_death_throes();
         DebugState.set_current_exception($e);
         say %sources{$file}.exception_summary($e, $line - 1);
-        DebugState.issue_prompt($ctx.WHO);
+        DebugState.issue_prompt($ctx.WHO, $file);
     }
     else {
         say "Unhandled exception: $e.message() @ $file:$line";
