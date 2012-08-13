@@ -254,7 +254,7 @@ my class DebugState {
                     exit(0);
                 }
                 default {
-                    say "Sorry, I don't understand"
+                    say "Sorry, I don't understand; for help type h"
                 }
             }
         }
