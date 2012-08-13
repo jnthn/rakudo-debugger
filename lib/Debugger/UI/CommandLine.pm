@@ -130,9 +130,11 @@ my class SourceFile {
 
 # Holds the current state of the debugger.
 my class DebugState {
-    my $dying = False;
+    my enum RunMode <Step RunToThrowOrBreakpoint RunToUnhandledOrBreakpoint>;
+    my RunMode $run_mode  = Step;
+    my Bool    $dying     = False;
+    my Bool    $in_prompt = False;
     my $cur_ex;
-    my $in_prompt = False;
     
     method eval_in_ctx($ctx, $code) {
         ENTER $*DEBUG_HOOKS.suspend();
@@ -157,10 +159,28 @@ my class DebugState {
         $in_prompt
     }
     
+    method is_breakpoint_at($filename, $from, $to) {
+        False
+    }
+    
+    method should_break_at($filename, $from, $to) {
+        $run_mode == Step || self.is_breakpoint_at($filename, $from, $to)
+    }
+    
+    method should_break_on_throw() {
+        $run_mode != RunToUnhandledOrBreakpoint
+    }
+    
     method prompt_color() {
         $dying  ?? 'red'    !!
         $cur_ex ?? 'yellow' !!
                    'blue'
+    }
+    
+    method complain_about_being_dying() {
+        say colored(
+            'Cannot continue execution after an unhandled exception',
+            'red');
     }
     
     method issue_prompt($ctx) {
@@ -169,14 +189,10 @@ my class DebugState {
         loop {
             given prompt(colored('> ', self.prompt_color())) {
                 when '' {
-                    if $dying {
-                        say colored(
-                            'Cannot continue execution after an unhandled exception',
-                            'red');
-                    }
-                    else {
-                        return;
-                    }
+                    $run_mode = Step;
+                    $dying
+                        ?? self.complain_about_being_dying()
+                        !! return
                 }
                 when /^ < p print s say > \s+ (.+)/ {
                     say self.eval_in_ctx($ctx, ~$0);
@@ -200,6 +216,24 @@ my class DebugState {
                         default {
                             say colored($_.message, 'red');
                         }
+                    }
+                }
+                when 'r' {
+                    if $dying {
+                        self.complain_about_being_dying();
+                    }
+                    else {
+                        $run_mode = RunToUnhandledOrBreakpoint;
+                        return;
+                    }
+                }
+                when 'rt' {
+                    if $dying {
+                        self.complain_about_being_dying();
+                    }
+                    else {
+                        $run_mode = RunToThrowOrBreakpoint;
+                        return;
                     }
                 }
                 when 'bt' | 'st' {
@@ -234,6 +268,8 @@ my class DebugState {
     method usage() {
         join "\n",
             ('<enter>            single step' unless $dying),
+            ('r                  run until the next breakpoint or unhnadled exception' unless $dying),
+            ('rt                 run until the next breakpoint or an exception is thrown' unless $dying),
             's[ay], p[rint]     evaluate and display an expression in the current scope',
             'e[val]             evaluate an expression in the current scope',
             '$s, @a, %h         show .perl of the a variable in scope (indexing allowed)',
@@ -250,12 +286,16 @@ $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
     %sources{$filename} = SourceFile.new(:$filename, :$source);
 });
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
-    say %sources{$filename}.summary_around($from, $to);
-    DebugState.issue_prompt($ctx);
+    if DebugState.should_break_at($filename, $from, $to) {
+        say %sources{$filename}.summary_around($from, $to);
+        DebugState.issue_prompt($ctx);
+    }
 });
 $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
-    say %sources{$filename}.summary_around($from, $to);
-    DebugState.issue_prompt($ctx);
+    if DebugState.should_break_at($filename, $from, $to) {
+        say %sources{$filename}.summary_around($from, $to);
+        DebugState.issue_prompt($ctx);
+    }
 });
 
 # Allow interception of throwing an exception.
@@ -266,10 +306,12 @@ my $CUR_EX;
     my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
     my $e = callsame;
     unless $IN_UNHANDLED || $IN_THROWN || DebugState.in_prompt {
-        $IN_THROWN = 1;
-        $CUR_EX = $e;
-        pir::perl6_invoke_catchhandler__vPP(&thrown, $vm_ex);
-        $IN_THROWN = 0;
+        if DebugState.should_break_on_throw() {
+            $IN_THROWN = 1;
+            $CUR_EX = $e;
+            pir::perl6_invoke_catchhandler__vPP(&thrown, $vm_ex);
+            $IN_THROWN = 0;
+        }
     }
     $e
 });
