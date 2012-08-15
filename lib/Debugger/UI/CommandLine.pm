@@ -93,7 +93,7 @@ my class SourceFile {
         my $ctx_end = $to_line + 2;
         $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
         return join "\n",
-            colored("+ $!filename ($ctx_start - $ctx_end)", 'blue'),
+            colored("+ $!filename ($ctx_start.succ() - $ctx_end.succ())", 'blue'),
             normal_lines(@!lines[$ctx_start..^$from_line], 'blue'),
             highlighted_lines(@!lines[$from_line..$to_line], $from_pos, $to_pos),
             normal_lines(@!lines[$to_line^..$ctx_end], 'blue');
@@ -107,7 +107,7 @@ my class SourceFile {
         return join "\n",
             colored("+ Exception Thrown", 'yellow'),
             colored('| ', 'yellow') ~ $e.message,
-            colored("+ $!filename ($ctx_start - $ctx_end)", 'yellow'),
+            colored("+ $!filename ($ctx_start.succ() - $ctx_end.succ())", 'yellow'),
             normal_lines(@!lines[$ctx_start..^$line], 'yellow'),
             throw_lines([@!lines[$line]]),
             normal_lines(@!lines[$line^..$ctx_end], 'yellow');
@@ -121,7 +121,7 @@ my class SourceFile {
         return join "\n",
             colored("+ Uncaught Exception", 'red'),
             colored('| ', 'red') ~ $e.message,
-            colored("+ $!filename ($ctx_start - $ctx_end)", 'red'),
+            colored("+ $!filename ($ctx_start.succ() - $ctx_end.succ())", 'red'),
             normal_lines(@!lines[$ctx_start..^$line], 'red'),
             error_lines([@!lines[$line]]),
             normal_lines(@!lines[$line^..$ctx_end], 'red');
