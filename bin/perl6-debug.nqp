@@ -63,6 +63,10 @@ class Perl6::HookActions is Perl6::Actions {
                 $accept := 0;
                 last;
             }
+            if $_.key eq 'scope_declarator' && $_.value<sym> eq 'has' {
+                $accept := 0;
+                last;
+            }
         }
         $accept
     }
