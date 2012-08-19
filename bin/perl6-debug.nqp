@@ -46,30 +46,30 @@ class Perl6::HookGrammar is Perl6::Grammar {
             }
             %*SEEN_FILES{$file} := 1;
         }
-		my $cur_st_depth := $*ST_DEPTH;
-		{
-			my $*ST_DEPTH := $cur_st_depth + 1;
-			Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
-		}
+        my $cur_st_depth := $*ST_DEPTH;
+        {
+            my $*ST_DEPTH := $cur_st_depth + 1;
+            Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
+        }
     }
-	
-	method comp_unit() {
-		my $*ST_DEPTH := 0;
-		my %*SEEN_FILES;
-		Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
-	}
-	
-	method blockoid() {
-		my $*ST_DEPTH := 0;
-		Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'blockoid')(self)
-	}
-	
-	method semilist() {
-		my $cur_st_depth := $*ST_DEPTH;
-		{
-			my $*ST_DEPTH := $cur_st_depth + 1;
-			Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'semilist')(self)
-		}
+    
+    method comp_unit() {
+        my $*ST_DEPTH := 0;
+        my %*SEEN_FILES;
+        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
+    }
+    
+    method blockoid() {
+        my $*ST_DEPTH := 0;
+        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'blockoid')(self)
+    }
+    
+    method semilist() {
+        my $cur_st_depth := $*ST_DEPTH;
+        {
+            my $*ST_DEPTH := $cur_st_depth + 1;
+            Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'semilist')(self)
+        }
     }
 }
 
