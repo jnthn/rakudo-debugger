@@ -13,6 +13,11 @@ my class SourceFile {
     has @!line_offsets;
     
     method BUILD(:$!filename, :$!source) {
+        # Ensure source ends with a newline.
+        unless $!source ~~ /\n$/ {
+            $!source ~= "\n";
+        }
+        
         # Store (abbreviated if needed) lines.
         @!lines = lines($!source).map(-> $l {
             $l.chars > 77 ?? $l.substr(0, 74) ~ '...' !! $l
