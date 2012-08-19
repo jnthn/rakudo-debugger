@@ -350,7 +350,9 @@ my class DebugState {
 
 # Install various hooks.
 $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
-    say colored('>>> LOADING ', 'magenta') ~ $filename;
+    unless $filename eq '<unknown>' {
+        say colored('>>> LOADING ', 'magenta') ~ $filename;
+    }
     %sources{$filename} = SourceFile.new(:$filename, :$source);
 });
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {

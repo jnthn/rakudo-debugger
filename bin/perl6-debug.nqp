@@ -40,11 +40,11 @@ class Perl6::HookGrammar is Perl6::Grammar {
     
     method statementlist() {
         my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
-        unless nqp::existskey(%seen_files, $file) {
+        unless nqp::existskey(%*SEEN_FILES, $file) {
             if $*DEBUG_HOOKS.has_hook('new_file') {
                 $*DEBUG_HOOKS.get_hook('new_file')($file, self.MATCH.orig);
             }
-            %seen_files{$file} := 1;
+            %*SEEN_FILES{$file} := 1;
         }
 		my $cur_st_depth := $*ST_DEPTH;
 		{
@@ -55,6 +55,7 @@ class Perl6::HookGrammar is Perl6::Grammar {
 	
 	method comp_unit() {
 		my $*ST_DEPTH := 0;
+		my %*SEEN_FILES;
 		Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
 	}
 	
@@ -104,7 +105,7 @@ class Perl6::HookActions is Perl6::Actions {
                     QAST::Op.new(
                         :op('call'),
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
-                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
                         ps_qast(),
                         $*W.add_numeric_constant('Int', $/.from),
                         $*W.add_numeric_constant('Int', $/.to)
@@ -123,7 +124,7 @@ class Perl6::HookActions is Perl6::Actions {
                 QAST::Op.new(
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_string_constant('if'),
                     $*W.add_numeric_constant('Int', $<sym>.from),
@@ -141,7 +142,7 @@ class Perl6::HookActions is Perl6::Actions {
                 QAST::Op.new(
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown file>'),
+                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_string_constant(~$<sym>),
                     $*W.add_numeric_constant('Int', $<sym>.from),
