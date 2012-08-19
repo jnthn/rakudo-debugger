@@ -90,6 +90,10 @@ class Perl6::HookActions is Perl6::Actions {
                 $accept := 0;
                 last;
             }
+            if $_.key eq 'type_declarator' {
+                $accept := 0;
+                last;
+            }
         }
         $accept
     }
