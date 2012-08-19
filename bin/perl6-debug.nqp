@@ -46,7 +46,29 @@ class Perl6::HookGrammar is Perl6::Grammar {
             }
             %seen_files{$file} := 1;
         }
-        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
+		my $cur_st_depth := $*ST_DEPTH;
+		{
+			my $*ST_DEPTH := $cur_st_depth + 1;
+			Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
+		}
+    }
+	
+	method comp_unit() {
+		my $*ST_DEPTH := 0;
+		Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
+	}
+	
+	method blockoid() {
+		my $*ST_DEPTH := 0;
+		Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'blockoid')(self)
+	}
+	
+	method semilist() {
+		my $cur_st_depth := $*ST_DEPTH;
+		{
+			my $*ST_DEPTH := $cur_st_depth + 1;
+			Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'semilist')(self)
+		}
     }
 }
 
@@ -73,7 +95,7 @@ class Perl6::HookActions is Perl6::Actions {
     
     method statement($/) {
         Perl6::Actions.statement($/);
-        if $<EXPR> && interesting_expr($<EXPR>) {
+        if $*ST_DEPTH <= 1 && $<EXPR> && interesting_expr($<EXPR>) {
             my $stmt := $/.ast;
             my $pot_hash := nqp::istype($stmt, QAST::Op) &&
                 ($stmt.name eq '&infix:<,>' || $stmt.name eq '&infix:<=>>');
