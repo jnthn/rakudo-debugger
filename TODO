@@ -1,0 +1,5 @@
+* Treat statement modifiers better
+* Handle stepping through various missing statement modifiers
+* Improve accuracy of highlighting the exception-throwing code
+* Regex debugging
+* Allow setting breakpoint on a routine name
