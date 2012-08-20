@@ -238,6 +238,9 @@ my class DebugState {
         LEAVE $in_prompt = False;
         loop {
             given prompt(colored('> ', self.prompt_color())) {
+                when Str { # eof
+                    return
+                }
                 when '' {
                     $run_mode = Step;
                     $dying
