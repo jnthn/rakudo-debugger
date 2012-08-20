@@ -238,7 +238,7 @@ my class DebugState {
         LEAVE $in_prompt = False;
         loop {
             given prompt(colored('> ', self.prompt_color())) {
-                when Str { # eof
+                when !.defined { # eof
                     return
                 }
                 when '' {
