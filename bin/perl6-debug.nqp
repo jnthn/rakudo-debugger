@@ -83,7 +83,8 @@ class Perl6::HookActions is Perl6::Actions {
     my %uninteresting := nqp::hash(
         'package_declarator', 1,
         'routine_declarator', 1,
-        'multi_declarator', 1
+        'multi_declarator', 1,
+        'type_declarator', 1
     );
     sub interesting_expr($e) {
         my $accept := 1;
@@ -96,7 +97,7 @@ class Perl6::HookActions is Perl6::Actions {
                 $accept := 0;
                 last;
             }
-            if $_.key eq 'type_declarator' {
+            if $_.key eq 'circumfix' && $e<circumfix><pblock> {
                 $accept := 0;
                 last;
             }
