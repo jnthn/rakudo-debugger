@@ -85,6 +85,7 @@ class Perl6::HookActions is Perl6::Actions {
         'routine_declarator', 1,
         'multi_declarator', 1,
         'type_declarator', 1,
+        'regex_declarator', 1,
         'statement_prefix', 1
     );
     sub interesting_expr($e) {
