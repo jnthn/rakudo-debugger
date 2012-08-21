@@ -5,12 +5,23 @@ use Term::ANSIColor;
 # The source code of the files we've encountred while debugging.
 my %sources;
 
+sub eval_in_ctx($ctx, $code) {
+    ENTER $*DEBUG_HOOKS.suspend();
+    LEAVE $*DEBUG_HOOKS.unsuspend();
+    my $compiler := pir::compreg__PS('perl6');
+    my $vm_ctx   := nqp::getattr(nqp::p6decont($ctx), PseudoStash, '$!ctx');
+    my $pbc      := $compiler.compile($code, :outer_ctx($vm_ctx), :global(GLOBAL));
+    nqp::atpos($pbc, 0).set_outer_ctx($vm_ctx);
+    $pbc();
+}
+
 # Represents a file that we're debugging.
 my class SourceFile {
     has $.filename;
     has $.source;
     has @!lines;
     has @!line_offsets;
+    has @!regex_regions;
     
     method BUILD(:$!filename, :$!source) {
         # Ensure source ends with a newline.
@@ -28,6 +39,10 @@ my class SourceFile {
             @!line_offsets.push($m.from);
         }
         @!line_offsets.push($!source.chars);
+    }
+    
+    method add_regex_region($from_pos, $to_pos) {
+        @!regex_regions.push(item $from_pos..$to_pos);
     }
     
     method line_of($pos, $def_line, $def_pos) {
@@ -90,7 +105,28 @@ my class SourceFile {
         }
     }
     
-    method summary_around($from, $to) {
+    method regex_match_status($from, $to, $ctx) {
+        if $from..$to ~~ any(@!regex_regions) {
+            my $cur = try eval_in_ctx($ctx, q[DYNAMIC::<$¢>]);
+            if $cur ~~ Cursor {
+                my $pos = $cur.pos;
+                my $before = $cur.target.substr(0, $pos);
+                my $after  = $cur.target.substr($pos);
+                if $cur.target.chars > 77 {
+                    
+                }
+                return normal_lines(
+                    [
+                        colored('Regex Match Position', 'blue'),
+                        colored($before, 'green') ~ $after
+                    ],
+                    'blue')
+            }
+        }
+        ()
+    }
+    
+    method summary_around($from, $to, $ctx) {
         my ($from_line, $from_pos) = self.line_of($from, 0, 0);
         my ($to_line, $to_pos)     = self.line_of($to, $from_line, $from_pos);
         my $ctx_start = $from_line - 2;
@@ -101,7 +137,8 @@ my class SourceFile {
             colored("+ $!filename ($ctx_start.succ() - $ctx_end.succ())", 'blue'),
             normal_lines(@!lines[$ctx_start..^$from_line], 'blue'),
             highlighted_lines(@!lines[$from_line..$to_line], $from_pos, $to_pos),
-            normal_lines(@!lines[$to_line^..$ctx_end], 'blue');
+            normal_lines(@!lines[$to_line^..$ctx_end], 'blue'),
+            self.regex_match_status($from, $to, $ctx);
     }
     
     method throw_summary($e, $line) {
@@ -141,17 +178,7 @@ my class DebugState {
     my Bool    $in_prompt = False;
     my %breakpoints;
     my $cur_ex;
-    
-    method eval_in_ctx($ctx, $code) {
-        ENTER $*DEBUG_HOOKS.suspend();
-        LEAVE $*DEBUG_HOOKS.unsuspend();
-        my $compiler := pir::compreg__PS('perl6');
-        my $vm_ctx   := nqp::getattr(nqp::p6decont($ctx), PseudoStash, '$!ctx');
-        my $pbc      := $compiler.compile($code, :outer_ctx($vm_ctx), :global(GLOBAL));
-        nqp::atpos($pbc, 0).set_outer_ctx($vm_ctx);
-        $pbc();
-    }
-    
+
     method set_current_exception($ex) {
         $cur_ex = $ex;
     }
@@ -248,7 +275,7 @@ my class DebugState {
                         !! return
                 }
                 when /^ < p print s say > \s+ (.+)/ {
-                    say self.eval_in_ctx($ctx, ~$0);
+                    say eval_in_ctx($ctx, ~$0);
                     CATCH {
                         default {
                             say colored($_.message, 'red');
@@ -256,7 +283,7 @@ my class DebugState {
                     }
                 }
                 when /^ < e eval > \s+ (.+)/ {
-                    self.eval_in_ctx($ctx, ~$0);
+                    eval_in_ctx($ctx, ~$0);
                     CATCH {
                         default {
                             say colored($_.message, 'red');
@@ -264,7 +291,7 @@ my class DebugState {
                     }
                 }
                 when /^ (< $ @ % > .+)/ {
-                    say self.eval_in_ctx($ctx, ~$0).perl;
+                    say eval_in_ctx($ctx, ~$0).perl;
                     CATCH {
                         default {
                             say colored($_.message, 'red');
@@ -365,13 +392,22 @@ $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
 });
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
-        say %sources{$filename}.summary_around($from, $to);
+        say %sources{$filename}.summary_around($from, $to, $ctx);
         DebugState.issue_prompt($ctx, $filename);
     }
 });
 $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
-        say %sources{$filename}.summary_around($from, $to);
+        say %sources{$filename}.summary_around($from, $to, $ctx);
+        DebugState.issue_prompt($ctx, $filename);
+    }
+});
+$*DEBUG_HOOKS.set_hook('regex_region', -> $filename, $from_pos, $to_pos {
+    %sources{$filename}.add_regex_region($from_pos, $to_pos);
+});
+$*DEBUG_HOOKS.set_hook('regex_atom', -> $filename, $ctx, $from, $to {
+    if DebugState.should_break_at($filename, $from, $to) {
+        say %sources{$filename}.summary_around($from, $to, $ctx);
         DebugState.issue_prompt($ctx, $filename);
     }
 });
