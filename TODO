@@ -1,4 +1,5 @@
-* Treat statement modifiers better
-* Handle stepping through various missing statement controls
+* Check and maybe improve statement modifier handling
+* Fix elsif handling
+* Handle stepping through loop and require
 * Improve accuracy of highlighting the exception-throwing code
 * Allow setting breakpoint on a routine name
