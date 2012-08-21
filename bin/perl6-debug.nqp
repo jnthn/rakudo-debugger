@@ -35,44 +35,6 @@ sub ps_qast() {
     )
 }
 
-class Perl6::HookGrammar is Perl6::Grammar {
-    my %seen_files;
-    
-    method statementlist() {
-        my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
-        unless nqp::existskey(%*SEEN_FILES, $file) {
-            if $*DEBUG_HOOKS.has_hook('new_file') {
-                $*DEBUG_HOOKS.get_hook('new_file')($file, self.MATCH.orig);
-            }
-            %*SEEN_FILES{$file} := 1;
-        }
-        my $cur_st_depth := $*ST_DEPTH;
-        {
-            my $*ST_DEPTH := $cur_st_depth + 1;
-            Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
-        }
-    }
-    
-    method comp_unit() {
-        my $*ST_DEPTH := 0;
-        my %*SEEN_FILES;
-        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
-    }
-    
-    method blockoid() {
-        my $*ST_DEPTH := 0;
-        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'blockoid')(self)
-    }
-    
-    method semilist() {
-        my $cur_st_depth := $*ST_DEPTH;
-        {
-            my $*ST_DEPTH := $cur_st_depth + 1;
-            Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'semilist')(self)
-        }
-    }
-}
-
 class Perl6::HookActions is Perl6::Actions {
     my %uninteresting := nqp::hash(
         'package_declarator', 1,
@@ -181,6 +143,49 @@ class Perl6::HookActions is Perl6::Actions {
     method statement_control:sym<when>($/) {
         Perl6::Actions.statement_control:sym<when>($/);
         simple_xblock_hook($/);
+    }
+}
+
+class Perl6::HookGrammar is Perl6::Grammar {
+    my %seen_files;
+    
+    method statementlist() {
+        my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
+        unless nqp::existskey(%*SEEN_FILES, $file) {
+            if $*DEBUG_HOOKS.has_hook('new_file') {
+                # First time we've seen this file; register it.
+                $*DEBUG_HOOKS.get_hook('new_file')($file, self.MATCH.orig);
+                
+                # Also fiddle the %*LANG for the appropriate actions.
+                %*LANG<MAIN>          := Perl6::HookGrammar;
+                %*LANG<MAIN-actions>  := Perl6::HookActions;
+            }
+            %*SEEN_FILES{$file} := 1;
+        }
+        my $cur_st_depth := $*ST_DEPTH;
+        {
+            my $*ST_DEPTH := $cur_st_depth + 1;
+            Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'statementlist')(self)
+        }
+    }
+    
+    method comp_unit() {
+        my $*ST_DEPTH := 0;
+        my %*SEEN_FILES;
+        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
+    }
+    
+    method blockoid() {
+        my $*ST_DEPTH := 0;
+        Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'blockoid')(self)
+    }
+    
+    method semilist() {
+        my $cur_st_depth := $*ST_DEPTH;
+        {
+            my $*ST_DEPTH := $cur_st_depth + 1;
+            Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'semilist')(self)
+        }
     }
 }
 
