@@ -1,5 +1,5 @@
 * Check and maybe improve statement modifier handling
 * Fix elsif handling
-* Handle stepping through loop and require
+* Handle stepping through require
 * Improve accuracy of highlighting the exception-throwing code
 * Allow setting breakpoint on a routine name

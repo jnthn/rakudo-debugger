@@ -198,6 +198,48 @@ class Perl6::HookActions is Perl6::Actions {
         }
     }
     
+    method statement_control:sym<loop>($/) {
+        if $*DEBUG_HOOKS.has_hook('statement_cond') {
+            for <e1 e2 e3> -> $expr {
+                if $/{$expr} -> $m {
+                    $m[0].'!make'(QAST::Stmts.new(
+                        QAST::Op.new(
+                            :op('call'),
+                            QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
+                            $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                            ps_qast(),
+                            $*W.add_string_constant('loop'),
+                            $*W.add_numeric_constant('Int', widen_expr_from($m[0])),
+                            $*W.add_numeric_constant('Int', widen_expr_to($m[0]))
+                        ),
+                        $m[0].ast
+                    ));
+                }
+            }
+        }
+        Perl6::Actions.statement_control:sym<loop>($/);
+    }
+    
+    sub widen_expr_from($e) {
+        my $from := $e.from;
+        for @($e) {
+            if $_.from < $from {
+                $from := $_.from;
+            }
+        }
+        $from
+    }
+    
+    sub widen_expr_to($e) {
+        my $to := $e.to;
+        for @($e) {
+            if $_.to > $to {
+                $to := $_.to;
+            }
+        }
+        $to
+    }
+    
     method statement_control:sym<for>($/) {
         Perl6::Actions.statement_control:sym<for>($/);
         simple_xblock_hook($/);
