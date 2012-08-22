@@ -131,22 +131,26 @@ class Perl6::HookActions is Perl6::Actions {
     }
     
     method statement_control:sym<if>($/) {
-        Perl6::Actions.statement_control:sym<if>($/);
-        my $stmt := $/.ast;
         if $*DEBUG_HOOKS.has_hook('statement_cond') {
-            $/.'!make'(QAST::Stmts.new(
-                QAST::Op.new(
-                    :op('call'),
-                    QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
-                    ps_qast(),
-                    $*W.add_string_constant('if'),
-                    $*W.add_numeric_constant('Int', $<sym>.from),
-                    $*W.add_numeric_constant('Int', $<xblock>[0]<pblock>.from - 1)
-                ),
-                $stmt
-            ));
+            my $from := $<sym>.from;
+            for $<xblock> {
+                my $ast := $_.ast;
+                $ast[0] := QAST::Stmts.new(
+                    QAST::Op.new(
+                        :op('call'),
+                        QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
+                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                        ps_qast(),
+                        $*W.add_string_constant('if'),
+                        $*W.add_numeric_constant('Int', $from),
+                        $*W.add_numeric_constant('Int', $_<pblock>.from - 1)
+                    ),
+                    $ast[0]
+                );
+                $from := $_<pblock>.to + 1;
+            }
         }
+        Perl6::Actions.statement_control:sym<if>($/);
     }
     
     sub simple_xblock_hook($/) {

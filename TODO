@@ -1,4 +1,3 @@
 * Check and maybe improve statement modifier handling
-* Fix elsif handling
 * Improve accuracy of highlighting the exception-throwing code
 * Allow setting breakpoint on a routine name
