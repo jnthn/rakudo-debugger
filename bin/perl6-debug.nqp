@@ -254,6 +254,23 @@ class Perl6::HookActions is Perl6::Actions {
         Perl6::Actions.statement_control:sym<when>($/);
         simple_xblock_hook($/);
     }
+    
+    method statement_control:sym<require>($/) {
+        Perl6::Actions.statement_control:sym<require>($/);
+        if $*DEBUG_HOOKS.has_hook('statement_simple') {
+            $/.'!make'(QAST::Stmts.new(
+                QAST::Op.new(
+                    :op('call'),
+                    QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
+                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                    ps_qast(),
+                    $*W.add_numeric_constant('Int', $/.from),
+                    $*W.add_numeric_constant('Int', $/.to)
+                ),
+                $/.ast
+            ));
+        }
+    }
 }
 
 class Perl6::HookGrammar is Perl6::Grammar {
