@@ -154,7 +154,7 @@ my class SourceFile {
         $ctx_end = +@!lines - 1 if $ctx_end >= @!lines;
         return join "\n",
             colored("+ Exception Thrown", 'yellow'),
-            colored('| ', 'yellow') ~ $e.message,
+            normal_lines(lines($e.message), 'yellow'),
             colored("+ $!filename ($ctx_start.succ() - $ctx_end.succ())", 'yellow'),
             normal_lines(@!lines[$ctx_start..^$line], 'yellow'),
             throw_lines([@!lines[$line]]),
