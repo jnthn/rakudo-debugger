@@ -67,7 +67,7 @@ class Perl6::HookRegexActions is Perl6::RegexActions {
                     QAST::Op.new(
                         :op('call'),
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('regex_atom')) ),
-                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                        $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
                         $*W.add_numeric_constant('Int', $/.from),
                         $*W.add_numeric_constant('Int', $/.to)
@@ -119,7 +119,7 @@ class Perl6::HookActions is Perl6::Actions {
                     QAST::Op.new(
                         :op('call'),
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
-                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                        $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
                         $*W.add_numeric_constant('Int', $/.from),
                         $*W.add_numeric_constant('Int', $/.to)
@@ -139,7 +139,7 @@ class Perl6::HookActions is Perl6::Actions {
                     QAST::Op.new(
                         :op('call'),
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                        $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                        $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
                         $*W.add_string_constant('if'),
                         $*W.add_numeric_constant('Int', $from),
@@ -160,7 +160,7 @@ class Perl6::HookActions is Perl6::Actions {
                 QAST::Op.new(
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                    $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_string_constant(~$<sym>),
                     $*W.add_numeric_constant('Int', $<sym>.from),
@@ -189,7 +189,7 @@ class Perl6::HookActions is Perl6::Actions {
                 QAST::Op.new(
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                    $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_string_constant(~$<wu>),
                     $*W.add_numeric_constant('Int', $<wu>.from),
@@ -210,7 +210,7 @@ class Perl6::HookActions is Perl6::Actions {
                         QAST::Op.new(
                             :op('call'),
                             QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_cond')) ),
-                            $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                            $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                             ps_qast(),
                             $*W.add_string_constant('loop'),
                             $*W.add_numeric_constant('Int', widen_expr_from($m[0])),
@@ -266,7 +266,7 @@ class Perl6::HookActions is Perl6::Actions {
                 QAST::Op.new(
                     :op('call'),
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
-                    $*W.add_string_constant(pir::find_caller_lex__ps('$?FILES') // '<unknown>'),
+                    $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_numeric_constant('Int', $/.from),
                     $*W.add_numeric_constant('Int', $/.to)
