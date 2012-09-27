@@ -422,7 +422,7 @@ $*DEBUG_HOOKS.set_hook('regex_atom', -> $filename, $ctx, $from, $to {
 my $IN_UNHANDLED = 0;
 my $IN_THROWN = 0;
 my $CUR_EX;
-&EXCEPTION.wrap(-> |$ {
+&EXCEPTION.wrap(-> | {
     my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
     my $e = callsame;
     unless $IN_UNHANDLED || $IN_THROWN || DebugState.in_prompt {
@@ -435,7 +435,7 @@ my $CUR_EX;
     }
     $e
 });
-sub thrown(|$) {
+sub thrown(|) {
     my $e = $CUR_EX;
     my $bt = $e.backtrace();
     my $ctx = CALLER;
@@ -457,11 +457,11 @@ sub thrown(|$) {
 
 # Override handler for uncaught exceptions.
 my Mu $p6comp := pir::compreg__Ps('perl6');
-$p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> |$ {
+$p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> | {
     my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 1);
     pir::perl6_invoke_catchhandler__vPP(&unhandled, $vm_ex);
 });
-sub unhandled(|$) {
+sub unhandled(|) {
     $IN_UNHANDLED = 1;
     my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
     my $e = EXCEPTION($vm_ex);
