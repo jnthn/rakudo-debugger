@@ -483,7 +483,7 @@ sub unhandled(|) {
         DebugState.issue_prompt($ctx.WHO, $file);
     }
     else {
-        say "Unhandled exception: $e.message() @ $file:$line";
+        say $e;
         exit(0);
     }
 }
