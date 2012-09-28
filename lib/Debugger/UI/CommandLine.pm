@@ -110,12 +110,12 @@ my class SourceFile {
             my $cur = try eval_in_ctx($ctx, q[DYNAMIC::<$¢>]);
             if $cur ~~ Cursor {
                 my $pos = $cur.pos;
-                my $str = $cur.target.subst("\n", '\n', :g).subst("\t", '\t', :g);
-                my $before = $str.substr(0, $pos);
-                my $after  = $str.substr($pos);
-                if $str.chars > 77 {
-                    if $after.chars > 50 {
-                        $after = $after.substr(0, 50) ~ '...';
+                my $str = $cur.target;
+                my $before = $str.substr(0, $pos).subst(/\n/, '\n', :g).subst(/\t/, '\t', :g);
+                my $after  = $str.substr($pos).subst(/\n/, '\n', :g).subst(/\t/, '\t', :g);
+                if $before.chars + $after.chars > 77 {
+                    if $after.chars > 43 {
+                        $after = $after.substr(0, 40) ~ '...';
                     }
                     if $before.chars > (74  - $after.chars) {
                         $before = "..." ~ $before.substr(* - (74 - $after.chars));
