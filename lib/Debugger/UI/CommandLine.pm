@@ -206,10 +206,42 @@ my class DebugState {
     my RunMode $run_mode  = Step;
     my Bool    $dying     = False;
     my Bool    $in_prompt = False;
-    my %breakpoints;
     my $cur_ex;
     my %stepping_out_of;
     my %stepping_over_in;
+    my %breakpoints;
+    my %tracepoints;
+    my @tp_log;
+    
+    my class TracePointLogEntry {
+        has $.tp;
+        has $.result;
+        has $.fail;
+    }
+    
+    my class TracePoint {
+        has $.file;
+        has $.line;
+        has $.expr;
+        
+        method hit($ctx) {
+            try {
+                @tp_log.push(TracePointLogEntry.new(
+                    tp     => self,
+                    result => eval_in_ctx($ctx, $!expr).gist
+                ));
+                CATCH {
+                    default {
+                        @tp_log.push(TracePointLogEntry.new(
+                            tp     => self,
+                            result => .gist,
+                            fail   => True
+                        ));
+                    }
+                }
+            }
+        }
+    }
 
     method set_current_exception($ex) {
         $cur_ex = $ex;
@@ -269,6 +301,45 @@ my class DebugState {
             my ($from_line, $) = %sources{$filename}.line_of($from, -1, -1);
             my ($to_line, $)   = %sources{$filename}.line_of($to, -1, -1);
             return any(@bp_lines) ~~ $from_line..$to_line;
+        }
+    }
+    
+    method add_tracepoint($file, $line, $expr) {
+        if self.normalize_filename($file) -> $norm_file {
+            push %tracepoints{$norm_file}, TracePoint.new(:file($norm_file), :$line, :$expr);
+        }
+        else {
+            say colored("Cannot add tracepoint to unknown file '$file'", 'red');
+        }
+    }
+    
+    method log_tracepoints($ctx, $filename, $from, $to) {
+        if %tracepoints{$filename} -> @tps {
+            my ($from_line, $) = %sources{$filename}.line_of($from, -1, -1);
+            my ($to_line, $)   = %sources{$filename}.line_of($to, -1, -1);
+            @tps.grep({ $^tp.line ~~ $from_line..$to_line })>>.hit($ctx);
+        }
+    }
+    
+    method render_one_tracepoint($tp) {
+        say colored(">>> ", 'blue') ~ $tp.expr;
+        for @tp_log.grep(*.tp === $tp) {
+            say .fail
+                ?? colored("* $_.result()", 'red')
+                !! colored("* ", 'blue') ~ $_.result();
+        }
+    }
+    
+    method render_all_tracepoints() {
+        my $last_tp;
+        for @tp_log -> (:$tp, :$result, :$fail) {
+            unless $tp === $last_tp {
+                say colored(">>> ", 'blue') ~ "$tp.file():$tp.line()";
+            }
+            say $fail
+                ?? colored("* $result", 'red')
+                !! colored("* ", 'blue') ~ $result;
+            $last_tp = $tp;
         }
     }
     
@@ -449,6 +520,38 @@ my class DebugState {
                 when /^ 'bp' <.ws> 'rm' <.ws> 'all' $/ {
                     %breakpoints = ();
                 }
+                when /^ 'tp' <.ws> 'add' <.ws> <p=&flpos> <.ws> (.+) $/ {
+                    self.add_tracepoint($<p><file> ?? ~$<p><file> !! $cur_file, +$<p><line>, ~$0);
+                }
+                when /^ 'tp' <.ws> 'list' $/ {
+                    for %tracepoints.kv -> $file, @tps {
+                        if @tps {
+                            say "$file:";
+                            for @tps -> $tp {
+                                say "    $tp.line(): $tp.expr()";
+                            }
+                        }
+                    }
+                }
+                when /^ 'tp' <.ws> 'show' [ <.ws> <p=&flpos> ]? $/ {
+                    if $<p> {
+                        my $file = $<p>[0]<file> ?? ~$<p>[0]<file> !! $cur_file;
+                        if %tracepoints{self.normalize_filename($file)} -> @tps {
+                            if @tps.first(*.line == +$<p>[0]<line>) -> $tp {
+                                self.render_one_tracepoint($tp);
+                            }
+                            else {
+                                say colored('No tracepoint at this line', 'red');
+                            }
+                        }
+                        else {
+                            say colored('No tracepoint in this file', 'red');
+                        }
+                    }
+                    else {
+                        self.render_all_tracepoints();
+                    }
+                }
                 when '?' | 'h' | 'help' {
                     say self.usage()
                 }
@@ -469,23 +572,25 @@ my class DebugState {
     
     method usage() {
         join "\n",
-            ('<enter>            single step, stepping into any calls' unless $dying),
-            ('s                  step to next statement, stepping over any calls' unless $dying),
-            ('so                 step out of the current routine' unless $dying),
-            ('r                  run until the next breakpoint or unhnadled exception' unless $dying),
-            ('rt                 run until the next breakpoint or an exception is thrown' unless $dying),
-            's[ay], p[rint]     evaluate and display an expression in the current scope',
-            'e[val]             evaluate an expression in the current scope',
-            '$s, @a, %h, self   show .perl of the a variable in scope (indexing allowed)',
-            'bt, st             show the backtrace from the current location',
-            ('ex                 show .perl of the current exception' if $cur_ex),
-            'bp add file:line   adds a breakpoint at the specified file/line',
-            'bp add line        adds a breakpoint at the specified line in this file',
-            'bp list            lists all active breakpoints',
-            'bp rm file:line    removes the breakpoint at the specified file/line',
-            'bp rm line         removes the breakpoint at the specified line in this file',
-            'bp rm all          removes all breakpoints',
-            'q[uit]             exit the debugger'
+            ('<enter>                single step, stepping into any calls' unless $dying),
+            ('s                      step to next statement, stepping over any calls' unless $dying),
+            ('so                     step out of the current routine' unless $dying),
+            ('r                      run until the next breakpoint or unhnadled exception' unless $dying),
+            ('rt                     run until the next breakpoint or an exception is thrown' unless $dying),
+            's[ay], p[rint]         evaluate and display an expression in the current scope',
+            'e[val]                 evaluate an expression in the current scope',
+            '$s, @a, %h, self       show .perl of the a variable in scope (indexing allowed)',
+            'bt, st                 show the backtrace from the current location',
+            ('ex                     show .perl of the current exception' if $cur_ex),
+            'bp add file:line       adds a breakpoint at file/line (file optional)',
+            'bp list                lists all active breakpoints',
+            'bp rm file:line        removes the breakpoint at file/line (file optional)',
+            'bp rm all              removes all breakpoints',
+            'tp add file:line expr  logs the value of expr each time file:line is hit',
+            'tp list                shows a list of all set tracepoints',
+            'tp show                shows the data collected by all tracepoints',
+            'tp show file:line      shows the data collected by the specified tracepoint',
+            'q[uit]                 exit the debugger'
             ;
     }
 }
@@ -501,12 +606,14 @@ $*DEBUG_HOOKS.set_hook('routine_region', -> $filename, $from_pos, $to_pos, $type
     %sources{$filename}.add_routine_region($from_pos, $to_pos, $type, $name);
 });
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
+    DebugState.log_tracepoints($ctx, $filename, $from, $to);
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to, $ctx);
         DebugState.issue_prompt($ctx, $filename, $from, $to);
     }
 });
 $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
+    DebugState.log_tracepoints($ctx, $filename, $from, $to);
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to, $ctx);
         DebugState.issue_prompt($ctx, $filename, $from, $to);
@@ -516,6 +623,7 @@ $*DEBUG_HOOKS.set_hook('regex_region', -> $filename, $from_pos, $to_pos {
     %sources{$filename}.add_regex_region($from_pos, $to_pos);
 });
 $*DEBUG_HOOKS.set_hook('regex_atom', -> $filename, $ctx, $from, $to {
+    DebugState.log_tracepoints($ctx, $filename, $from, $to);
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to, $ctx);
         DebugState.issue_prompt($ctx, $filename, $from, $to);
