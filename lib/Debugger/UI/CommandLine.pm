@@ -197,13 +197,14 @@ my class SourceFile {
 
 # Holds the current state of the debugger.
 my class DebugState {
-    my enum RunMode <Step StepOut RunToThrowOrBreakpoint RunToUnhandledOrBreakpoint>;
+    my enum RunMode <Step StepOver StepOut RunToThrowOrBreakpoint RunToUnhandledOrBreakpoint>;
     my RunMode $run_mode  = Step;
     my Bool    $dying     = False;
     my Bool    $in_prompt = False;
     my %breakpoints;
     my $cur_ex;
     my %stepping_out_of;
+    my %stepping_over_in;
 
     method set_current_exception($ex) {
         $cur_ex = $ex;
@@ -270,6 +271,22 @@ my class DebugState {
         given $run_mode {
             when Step {
                 True
+            }
+            when StepOver {
+                ENTER $in_prompt = True;
+                LEAVE $in_prompt = False;
+                my $depth = +lines(Backtrace.new().full) - 1;
+                if $depth < %stepping_over_in<depth> ||
+                        $filename eq %stepping_over_in<file> &&
+                        %sources{$filename}.routine_containing($from, $to) eq %stepping_over_in<routine> &&
+                        $depth == %stepping_over_in<depth> {
+                    $run_mode = Step;
+                    %stepping_over_in = ();
+                    True
+                }
+                else {
+                    False
+                }
             }
             when StepOut {
                 if $filename ne %stepping_out_of<file> || 
@@ -370,6 +387,20 @@ my class DebugState {
                         return;
                     }
                 }
+                when 's' {
+                    if $dying {
+                        self.complain_about_being_dying();
+                    }
+                    else {
+                        my $cur_routine = %sources{$cur_file}.routine_containing($from, $to);
+                        $run_mode = StepOver;
+                        %stepping_over_in =
+                            file    => $cur_file,
+                            routine => $cur_routine,
+                            depth   => +lines(Backtrace.new().full) - 4;
+                        return;
+                    }
+                }
                 when 'so' {
                     if $dying {
                         self.complain_about_being_dying();
@@ -434,6 +465,7 @@ my class DebugState {
     method usage() {
         join "\n",
             ('<enter>            single step, stepping into any calls' unless $dying),
+            ('s                  step to next statement, stepping over any calls' unless $dying),
             ('so                 step out of the current routine' unless $dying),
             ('r                  run until the next breakpoint or unhnadled exception' unless $dying),
             ('rt                 run until the next breakpoint or an exception is thrown' unless $dying),
