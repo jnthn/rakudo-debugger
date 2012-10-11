@@ -22,7 +22,7 @@ my class SourceFile {
     has @!lines;
     has @!line_offsets;
     has @!regex_regions;
-    has %!routine_regions;
+    has %!routine_regions{Range};
     
     my class RoutineInfo {
         has $.type;
@@ -53,6 +53,15 @@ my class SourceFile {
     
     method add_routine_region($from_pos, $to_pos, $type, $name) {
         %!routine_regions{item $from_pos..$to_pos} = RoutineInfo.new(:$type, :$name);
+    }
+    
+    method routine_containing($from_pos, $to_pos) {
+        my @best = %!routine_regions.grep(
+                { $from_pos..$to_pos ~~ $^r.key }
+            ).sort(
+                { .key.max - .key.min }
+            );
+        @best ?? @best[0].value.name !! ''
     }
     
     method line_of($pos, $def_line, $def_pos) {
@@ -188,12 +197,13 @@ my class SourceFile {
 
 # Holds the current state of the debugger.
 my class DebugState {
-    my enum RunMode <Step RunToThrowOrBreakpoint RunToUnhandledOrBreakpoint>;
+    my enum RunMode <Step StepOut RunToThrowOrBreakpoint RunToUnhandledOrBreakpoint>;
     my RunMode $run_mode  = Step;
     my Bool    $dying     = False;
     my Bool    $in_prompt = False;
     my %breakpoints;
     my $cur_ex;
+    my $stepping_out_of;
 
     method set_current_exception($ex) {
         $cur_ex = $ex;
@@ -257,7 +267,24 @@ my class DebugState {
     }
     
     method should_break_at($filename, $from, $to) {
-        $run_mode == Step || self.is_breakpoint_at($filename, $from, $to)
+        given $run_mode {
+            when Step {
+                True
+            }
+            when StepOut {
+                if %sources{$filename}.routine_containing($from, $to) ne $stepping_out_of {
+                    $run_mode = Step;
+                    $stepping_out_of = '';
+                    True
+                }
+                else {
+                    False
+                }
+            }
+            default {
+                self.is_breakpoint_at($filename, $from, $to);
+            }
+        }
     }
     
     method should_break_on_throw() {
@@ -286,7 +313,7 @@ my class DebugState {
         }
     }
     
-    method issue_prompt($ctx, $cur_file) {
+    method issue_prompt($ctx, $cur_file, $from = 0, $to = 0) {
         ENTER $in_prompt = True;
         LEAVE $in_prompt = False;
         loop {
@@ -342,6 +369,21 @@ my class DebugState {
                         return;
                     }
                 }
+                when 'so' {
+                    if $dying {
+                        self.complain_about_being_dying();
+                    }
+                    else {
+                        if %sources{$cur_file}.routine_containing($from, $to) -> $cur_routine {
+                            $run_mode = StepOut;
+                            $stepping_out_of = $cur_routine;
+                            return;
+                        }
+                        else {
+                            say colored("Not currently in a routine; cannot step out", 'red');
+                        }
+                    }
+                }
                 when 'bt' | 'st' {
                     say join "\n", lines(Backtrace.new().nice)[4..*];
                 }
@@ -390,7 +432,8 @@ my class DebugState {
     
     method usage() {
         join "\n",
-            ('<enter>            single step' unless $dying),
+            ('<enter>            single step, stepping into any calls' unless $dying),
+            ('so                 step out of the current routine' unless $dying),
             ('r                  run until the next breakpoint or unhnadled exception' unless $dying),
             ('rt                 run until the next breakpoint or an exception is thrown' unless $dying),
             's[ay], p[rint]     evaluate and display an expression in the current scope',
@@ -422,13 +465,13 @@ $*DEBUG_HOOKS.set_hook('routine_region', -> $filename, $from_pos, $to_pos, $type
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to, $ctx);
-        DebugState.issue_prompt($ctx, $filename);
+        DebugState.issue_prompt($ctx, $filename, $from, $to);
     }
 });
 $*DEBUG_HOOKS.set_hook('statement_cond', -> $filename, $ctx, $type, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to, $ctx);
-        DebugState.issue_prompt($ctx, $filename);
+        DebugState.issue_prompt($ctx, $filename, $from, $to);
     }
 });
 $*DEBUG_HOOKS.set_hook('regex_region', -> $filename, $from_pos, $to_pos {
@@ -437,7 +480,7 @@ $*DEBUG_HOOKS.set_hook('regex_region', -> $filename, $from_pos, $to_pos {
 $*DEBUG_HOOKS.set_hook('regex_atom', -> $filename, $ctx, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {
         say %sources{$filename}.summary_around($from, $to, $ctx);
-        DebugState.issue_prompt($ctx, $filename);
+        DebugState.issue_prompt($ctx, $filename, $from, $to);
     }
 });
 
