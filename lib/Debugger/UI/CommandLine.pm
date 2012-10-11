@@ -195,6 +195,11 @@ my class SourceFile {
     }
 }
 
+# File and line position.
+my regex flpos {
+    [$<file>=[<-[:]>+] ':']? $<line>=[\d+]
+}
+
 # Holds the current state of the debugger.
 my class DebugState {
     my enum RunMode <Step StepOver StepOut RunToThrowOrBreakpoint RunToUnhandledOrBreakpoint>;
@@ -330,7 +335,7 @@ my class DebugState {
             take $c unless $c eq "\r";
         }
     }
-    
+
     method issue_prompt($ctx, $cur_file, $from = 0, $to = 0) {
         ENTER $in_prompt = True;
         LEAVE $in_prompt = False;
@@ -427,8 +432,8 @@ my class DebugState {
                         say colored('No current exception', 'red');
                     }
                 }
-                when /^ 'bp' <.ws> 'add' <.ws> [$<file>=[<-[:]>+] ':']? $<line>=[\d+] $/ {
-                    self.add_breakpoint($<file> ?? ~$<file> !! $cur_file, +$<line>);
+                when /^ 'bp' <.ws> 'add' <.ws> <p=&flpos> $/ {
+                    self.add_breakpoint($<p><file> ?? ~$<p><file> !! $cur_file, +$<p><line>);
                 }
                 when /^ 'bp' <.ws> 'list' $/ {
                     for %breakpoints.kv -> $file, @lines {
@@ -438,8 +443,8 @@ my class DebugState {
                         }
                     }
                 }
-                when /^ 'bp' <.ws> 'rm' <.ws> [$<file>=[<-[:]>+] ':']? $<line>=[\d+] $/ {
-                    self.remove_breakpoint($<file> ?? ~$<file> !! $cur_file, +$<line>);
+                when /^ 'bp' <.ws> 'rm' <.ws> <p=&flpos> $/ {
+                    self.remove_breakpoint($<p><file> ?? ~$<p><file> !! $cur_file, +$<p><line>);
                 }
                 when /^ 'bp' <.ws> 'rm' <.ws> 'all' $/ {
                     %breakpoints = ();
