@@ -203,7 +203,7 @@ my class DebugState {
     my Bool    $in_prompt = False;
     my %breakpoints;
     my $cur_ex;
-    my $stepping_out_of;
+    my %stepping_out_of;
 
     method set_current_exception($ex) {
         $cur_ex = $ex;
@@ -272,9 +272,10 @@ my class DebugState {
                 True
             }
             when StepOut {
-                if %sources{$filename}.routine_containing($from, $to) ne $stepping_out_of {
+                if $filename ne %stepping_out_of<file> || 
+                        %sources{$filename}.routine_containing($from, $to) ne %stepping_out_of<routine> {
                     $run_mode = Step;
-                    $stepping_out_of = '';
+                    %stepping_out_of = ();
                     True
                 }
                 else {
@@ -376,7 +377,7 @@ my class DebugState {
                     else {
                         if %sources{$cur_file}.routine_containing($from, $to) -> $cur_routine {
                             $run_mode = StepOut;
-                            $stepping_out_of = $cur_routine;
+                            %stepping_out_of = file => $cur_file, routine => $cur_routine;
                             return;
                         }
                         else {
