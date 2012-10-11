@@ -22,6 +22,12 @@ my class SourceFile {
     has @!lines;
     has @!line_offsets;
     has @!regex_regions;
+    has %!routine_regions;
+    
+    my class RoutineInfo {
+        has $.type;
+        has $.name;
+    }
     
     method BUILD(:$!filename, :$!source) {
         # Ensure source ends with a newline.
@@ -43,6 +49,10 @@ my class SourceFile {
     
     method add_regex_region($from_pos, $to_pos) {
         @!regex_regions.push(item $from_pos..$to_pos);
+    }
+    
+    method add_routine_region($from_pos, $to_pos, $type, $name) {
+        %!routine_regions{item $from_pos..$to_pos} = RoutineInfo.new(:$type, :$name);
     }
     
     method line_of($pos, $def_line, $def_pos) {
@@ -405,6 +415,9 @@ $*DEBUG_HOOKS.set_hook('new_file', -> $filename, $source {
         say colored('>>> LOADING ', 'magenta') ~ $filename;
     }
     %sources{$filename} = SourceFile.new(:$filename, :$source);
+});
+$*DEBUG_HOOKS.set_hook('routine_region', -> $filename, $from_pos, $to_pos, $type, $name {
+    %sources{$filename}.add_routine_region($from_pos, $to_pos, $type, $name);
 });
 $*DEBUG_HOOKS.set_hook('statement_simple', -> $filename, $ctx, $from, $to {
     if DebugState.should_break_at($filename, $from, $to) {

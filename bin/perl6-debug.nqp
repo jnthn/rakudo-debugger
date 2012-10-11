@@ -275,6 +275,34 @@ class Perl6::HookActions is Perl6::Actions {
             ));
         }
     }
+    
+    sub routine_hook($/, $body, $type, $name) {
+        if $*DEBUG_HOOKS.has_hook('routine_region') {
+            my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
+            $*DEBUG_HOOKS.get_hook('routine_region')($file, $/.from, $/.to, $type, $name);
+        }
+    }
+    
+    method routine_declarator:sym<sub>($/) {
+        Perl6::Actions.routine_declarator:sym<sub>($/);
+        routine_hook($/, $<routine_def>, 'sub',
+            $<routine_def><deflongname> ?? ~$<routine_def><deflongname>[0] !! '');
+    }
+    method routine_declarator:sym<method>($/) {
+        Perl6::Actions.routine_declarator:sym<method>($/);
+        routine_hook($/, $<method_def>, 'method',
+            $<method_def><longname> ?? ~$<method_def><longname> !! '');
+    }
+    method routine_declarator:sym<submethod>($/) {
+        Perl6::Actions.routine_declarator:sym<submethod>($/);
+        routine_hook($/, $<method_def>, 'submethod',
+            $<method_def><longname> ?? ~$<method_def><longname> !! '');
+    }
+    method routine_declarator:sym<macro>($/) {
+        Perl6::Actions.routine_declarator:sym<macro>($/);
+        routine_hook($/, $<macro_def>, 'macro',
+            $<macro_def><deflongname> ?? ~$<macro_def><deflongname>[0] !! '');
+    }
 }
 
 class Perl6::HookGrammar is Perl6::Grammar {
