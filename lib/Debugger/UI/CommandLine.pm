@@ -306,7 +306,7 @@ my class DebugState {
                         }
                     }
                 }
-                when /^ (< $ @ % > .+)/ {
+                when /^ (< $ @ % > .+ | 'self' .*)/ {
                     say eval_in_ctx($ctx, ~$0).perl;
                     CATCH {
                         default {
@@ -385,7 +385,7 @@ my class DebugState {
             ('rt                 run until the next breakpoint or an exception is thrown' unless $dying),
             's[ay], p[rint]     evaluate and display an expression in the current scope',
             'e[val]             evaluate an expression in the current scope',
-            '$s, @a, %h         show .perl of the a variable in scope (indexing allowed)',
+            '$s, @a, %h, self   show .perl of the a variable in scope (indexing allowed)',
             'bt, st             show the backtrace from the current location',
             ('ex                 show .perl of the current exception' if $cur_ex),
             'bp add file:line   adds a breakpoint at the specified file/line',
