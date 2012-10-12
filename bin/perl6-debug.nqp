@@ -58,7 +58,7 @@ class Perl6::HookRegexActions is Perl6::RegexActions {
     method quantified_atom($/) {
         Perl6::RegexActions.quantified_atom($/);
         my $qa := $/.ast;
-        if $qa && $*DEBUG_HOOKS.has_hook('regex_atom') {
+        if $qa && !(~$/ ~~ /^\s*$/) && $*DEBUG_HOOKS.has_hook('regex_atom') {
             $/.'!make'(QAST::Regex.new(
                 :rxtype('concat'),
                 QAST::Regex.new(
