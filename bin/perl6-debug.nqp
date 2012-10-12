@@ -79,6 +79,50 @@ class Perl6::HookRegexActions is Perl6::RegexActions {
     }
 }
 
+grammar QRegex::P5Regex::HookGrammar is QRegex::P5Regex::Grammar {
+    method nibbler() {
+        my $*RX_TOP_LEVEL_NIBBLER := 0;
+        unless %*RX<DEBUGGER_SEEN> {
+            %*RX<DEBUGGER_SEEN> := 1;
+            $*RX_TOP_LEVEL_NIBBLER := 1;
+        }
+        QRegex::P5Regex::Grammar.HOW.find_method(QRegex::P5Regex::Grammar, 'nibbler')(self)
+    }
+}
+
+class QRegex::P5Regex::HookActions is QRegex::P5Regex::Actions {
+    method nibbler($/) {
+        if $*RX_TOP_LEVEL_NIBBLER && $*DEBUG_HOOKS.has_hook('regex_region') {
+            my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
+            $*DEBUG_HOOKS.get_hook('regex_region')($file, $/.from, $/.to);
+        }
+        QRegex::P5Regex::Actions.nibbler($/);
+    }
+    
+    method quantified_atom($/) {
+        QRegex::P5Regex::Actions.quantified_atom($/);
+        my $qa := $/.ast;
+        if $qa && !(~$/ ~~ /^\s*$/) && $*DEBUG_HOOKS.has_hook('regex_atom') {
+            $/.'!make'(QAST::Regex.new(
+                :rxtype('concat'),
+                QAST::Regex.new(
+                    :rxtype('qastnode'),
+                    :subtype('declarative'),
+                    QAST::Op.new(
+                        :op('call'),
+                        QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('regex_atom')) ),
+                        $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
+                        ps_qast(),
+                        $*W.add_numeric_constant('Int', $/.from),
+                        $*W.add_numeric_constant('Int', $/.to)
+                    )
+                ),
+                $qa
+            ));
+        }
+    }
+}
+
 class Perl6::HookActions is Perl6::Actions {
     my %uninteresting := nqp::hash(
         'package_declarator', 1,
@@ -316,10 +360,12 @@ class Perl6::HookGrammar is Perl6::Grammar {
                 $*DEBUG_HOOKS.get_hook('new_file')($file, self.MATCH.orig);
                 
                 # Also fiddle the %*LANG for the appropriate actions.
-                %*LANG<Regex>         := Perl6::HookRegexGrammar;
-                %*LANG<Regex-actions> := Perl6::HookRegexActions;
-                %*LANG<MAIN>          := Perl6::HookGrammar;
-                %*LANG<MAIN-actions>  := Perl6::HookActions;
+                %*LANG<Regex>           := Perl6::HookRegexGrammar;
+                %*LANG<Regex-actions>   := Perl6::HookRegexActions;
+                %*LANG<P5Regex>         := QRegex::P5Regex::HookGrammar;
+                %*LANG<P5Regex-actions> := QRegex::P5Regex::HookActions;
+                %*LANG<MAIN>            := Perl6::HookGrammar;
+                %*LANG<MAIN-actions>    := Perl6::HookActions;
             }
             %*SEEN_FILES{$file} := 1;
         }
