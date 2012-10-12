@@ -652,7 +652,12 @@ sub thrown(|) {
     my $bt = $e.backtrace();
     my $ctx = CALLER;
     my ($file, $line);
+    my $fail = False;
     for @$bt {
+        if .name eq '&fail' {
+            $fail = True;
+            last;
+        }
         if %sources.exists(.file) {
             $file = .file;
             $line = .line;
@@ -660,7 +665,7 @@ sub thrown(|) {
         }
         $ctx = $ctx.WHO.<CALLER>;
     }
-    if $file {
+    if !$fail && $file {
         DebugState.set_current_exception($e);
         say %sources{$file}.throw_summary($e, $line - 1);
         DebugState.issue_prompt($ctx.WHO, $file);
