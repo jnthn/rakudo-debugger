@@ -352,10 +352,10 @@ my class DebugState {
                 ENTER $in_prompt = True;
                 LEAVE $in_prompt = False;
                 my $depth = +lines(Backtrace.new().full) - 1;
-                if $depth < %stepping_over_in<depth> ||
-                        $filename eq %stepping_over_in<file> &&
+                if $filename eq %stepping_over_in<file> &&
                         %sources{$filename}.routine_containing($from, $to) eq %stepping_over_in<routine> &&
-                        $depth == %stepping_over_in<depth> {
+                        $depth == %stepping_over_in<depth>
+                        || $depth < %stepping_over_in<depth> {
                     $run_mode = Step;
                     %stepping_over_in = ();
                     True
@@ -365,8 +365,9 @@ my class DebugState {
                 }
             }
             when StepOut {
-                if $filename ne %stepping_out_of<file> || 
-                        %sources{$filename}.routine_containing($from, $to) ne %stepping_out_of<routine> {
+                if ($filename ne %stepping_out_of<file> || 
+                         %sources{$filename}.routine_containing($from, $to) ne %stepping_out_of<routine>)
+                         && (+lines(Backtrace.new().full) - 1) < %stepping_out_of<depth> {
                     $run_mode = Step;
                     %stepping_out_of = ();
                     True
@@ -484,7 +485,10 @@ my class DebugState {
                     else {
                         if %sources{$cur_file}.routine_containing($from, $to) -> $cur_routine {
                             $run_mode = StepOut;
-                            %stepping_out_of = file => $cur_file, routine => $cur_routine;
+                            %stepping_out_of =
+                                file    => $cur_file,
+                                routine => $cur_routine,
+                                depth   => +lines(Backtrace.new().full) - 4;
                             return;
                         }
                         else {
