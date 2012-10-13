@@ -343,7 +343,7 @@ class Perl6::HookActions is Perl6::Actions {
             $<method_def><longname> ?? ~$<method_def><longname> !! '');
     }
     method routine_declarator:sym<macro>($/) {
-        Perl6::Actions.routine_declarator:sym<macro>($/);
+        #Perl6::Actions.routine_declarator:sym<macro>($/);
         routine_hook($/, $<macro_def>, 'macro',
             $<macro_def><deflongname> ?? ~$<macro_def><deflongname>[0] !! '');
     }
