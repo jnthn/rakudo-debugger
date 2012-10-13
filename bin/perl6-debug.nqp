@@ -404,6 +404,15 @@ sub hll-config($config) {
     $config<build-date>     := '2012-08-05T16:57:45Z';
 }
 
+class Perl6::Debugger is Perl6::Compiler {
+    method eval(*@pos, *%named) {
+        if $*DEBUG_HOOKS.has_hook('reset') {
+            $*DEBUG_HOOKS.get_hook('reset')();
+        }
+        nqp::findmethod(Perl6::Compiler, 'eval')(self, |@pos, |%named)
+    }
+}
+
 sub MAIN(@ARGS) {
     # Initialize dynops.
     pir::rakudo_dynop_setup__v();
@@ -412,7 +421,7 @@ sub MAIN(@ARGS) {
     pir::getinterp__P().recursion_limit(100000);
 
     # Create and configure compiler object.
-    my $comp := Perl6::Compiler.new();
+    my $comp := Perl6::Debugger.new();
     $comp.language('perl6');
     $comp.parsegrammar(Perl6::HookGrammar);
     $comp.parseactions(Perl6::HookActions);

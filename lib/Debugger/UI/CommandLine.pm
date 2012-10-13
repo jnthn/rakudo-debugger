@@ -593,6 +593,18 @@ my class DebugState {
             'q[uit]                 exit the debugger'
             ;
     }
+    
+    method reset() {
+        $run_mode  = Step;
+        $dying     = False;
+        $in_prompt = False;
+        $cur_ex = Mu;
+        %stepping_out_of = ();
+        %stepping_over_in = ();
+        %breakpoints = ();
+        %tracepoints = ();
+        @tp_log = ();
+    }
 }
 
 # Install various hooks.
@@ -628,6 +640,9 @@ $*DEBUG_HOOKS.set_hook('regex_atom', -> $filename, $ctx, $from, $to {
         say %sources{$filename}.summary_around($from, $to, $ctx);
         DebugState.issue_prompt($ctx, $filename, $from, $to);
     }
+});
+$*DEBUG_HOOKS.set_hook('reset', -> {
+    DebugState.reset();
 });
 
 # Allow interception of throwing an exception.
