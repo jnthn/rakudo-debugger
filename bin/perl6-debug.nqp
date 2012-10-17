@@ -358,14 +358,6 @@ class Perl6::HookGrammar is Perl6::Grammar {
             if $*DEBUG_HOOKS.has_hook('new_file') {
                 # First time we've seen this file; register it.
                 $*DEBUG_HOOKS.get_hook('new_file')($file, self.MATCH.orig);
-                
-                # Also fiddle the %*LANG for the appropriate actions.
-                %*LANG<Regex>           := Perl6::HookRegexGrammar;
-                %*LANG<Regex-actions>   := Perl6::HookRegexActions;
-                %*LANG<P5Regex>         := QRegex::P5Regex::HookGrammar;
-                %*LANG<P5Regex-actions> := QRegex::P5Regex::HookActions;
-                %*LANG<MAIN>            := Perl6::HookGrammar;
-                %*LANG<MAIN-actions>    := Perl6::HookActions;
             }
             %*SEEN_FILES{$file} := 1;
         }
@@ -379,6 +371,15 @@ class Perl6::HookGrammar is Perl6::Grammar {
     method comp_unit() {
         my $*ST_DEPTH := 0;
         my %*SEEN_FILES;
+        
+        # Fiddle the %*LANG for the appropriate actions.
+        %*LANG<Regex>           := Perl6::HookRegexGrammar;
+        %*LANG<Regex-actions>   := Perl6::HookRegexActions;
+        %*LANG<P5Regex>         := QRegex::P5Regex::HookGrammar;
+        %*LANG<P5Regex-actions> := QRegex::P5Regex::HookActions;
+        %*LANG<MAIN>            := Perl6::HookGrammar;
+        %*LANG<MAIN-actions>    := Perl6::HookActions;
+        
         Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comp_unit')(self)
     }
     
