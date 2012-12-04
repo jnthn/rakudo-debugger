@@ -143,6 +143,15 @@ class Perl6::HookActions is Perl6::Actions {
                 $accept := 0;
                 last;
             }
+            if $_.key eq 'scope_declarator' && $_.value<sym> eq 'my' || $_.value<sym> eq 'our' {
+                if $_.value<scoped><declarator> -> $decl {
+                    # Skip plain, boring declarations with no assignment.
+                    if $decl<variable_declarator> && !$decl<initializer> {
+                        $accept := 0;
+                        last;
+                    }
+                }
+            }
             if $_.key eq 'circumfix' && $e<circumfix><pblock> {
                 $accept := 0;
                 last;
