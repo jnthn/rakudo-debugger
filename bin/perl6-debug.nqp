@@ -79,7 +79,7 @@ class Perl6::HookRegexActions is Perl6::RegexActions {
     }
 }
 
-grammar QRegex::P5Regex::HookGrammar is QRegex::P5Regex::Grammar {
+grammar QRegex::P5Regex::HookGrammar is Perl6::P5RegexGrammar {
     method nibbler() {
         my $*RX_TOP_LEVEL_NIBBLER := 0;
         unless %*RX<DEBUGGER_SEEN> {
@@ -90,7 +90,7 @@ grammar QRegex::P5Regex::HookGrammar is QRegex::P5Regex::Grammar {
     }
 }
 
-class QRegex::P5Regex::HookActions is QRegex::P5Regex::Actions {
+class QRegex::P5Regex::HookActions is Perl6::P5RegexActions {
     method nibbler($/) {
         if $*RX_TOP_LEVEL_NIBBLER && $*DEBUG_HOOKS.has_hook('regex_region') {
             my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
