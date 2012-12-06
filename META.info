@@ -1,0 +1,7 @@
+{
+    "name"        : "Rakudo::Debugger",
+    "version"     : "*",
+    "description" : "guess",
+    "depends"     : [ "Term::ANSIColor" ],
+    "source-url"  : "git://github.com/jnthn/rakudo-debugger.git"
+}
