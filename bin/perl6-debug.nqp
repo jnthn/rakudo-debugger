@@ -69,8 +69,8 @@ class Perl6::HookRegexActions is Perl6::RegexActions {
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('regex_atom')) ),
                         $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
-                        $*W.add_numeric_constant('Int', $/.from),
-                        $*W.add_numeric_constant('Int', $/.to)
+                        $*W.add_numeric_constant($/, 'Int', $/.from),
+                        $*W.add_numeric_constant($/, 'Int', $/.to)
                     )
                 ),
                 $qa
@@ -113,8 +113,8 @@ class QRegex::P5Regex::HookActions is Perl6::P5RegexActions {
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('regex_atom')) ),
                         $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
-                        $*W.add_numeric_constant('Int', $/.from),
-                        $*W.add_numeric_constant('Int', $/.to)
+                        $*W.add_numeric_constant($/, 'Int', $/.from),
+                        $*W.add_numeric_constant($/, 'Int', $/.to)
                     )
                 ),
                 $qa
@@ -174,8 +174,8 @@ class Perl6::HookActions is Perl6::Actions {
                         QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
                         $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
-                        $*W.add_numeric_constant('Int', $/.from),
-                        $*W.add_numeric_constant('Int', $/.to)
+                        $*W.add_numeric_constant($/, 'Int', $/.from),
+                        $*W.add_numeric_constant($/, 'Int', $/.to)
                     ),
                     $stmt
                 ));
@@ -195,8 +195,8 @@ class Perl6::HookActions is Perl6::Actions {
                         $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                         ps_qast(),
                         $*W.add_string_constant('if'),
-                        $*W.add_numeric_constant('Int', $from),
-                        $*W.add_numeric_constant('Int', $_<pblock>.from - 1)
+                        $*W.add_numeric_constant($/, 'Int', $from),
+                        $*W.add_numeric_constant($/, 'Int', $_<pblock>.from - 1)
                     ),
                     $ast[0]
                 );
@@ -216,8 +216,8 @@ class Perl6::HookActions is Perl6::Actions {
                     $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_string_constant(~$<sym>),
-                    $*W.add_numeric_constant('Int', $<sym>.from),
-                    $*W.add_numeric_constant('Int', $<xblock><pblock>.from - 1)
+                    $*W.add_numeric_constant($/, 'Int', $<sym>.from),
+                    $*W.add_numeric_constant($/, 'Int', $<xblock><pblock>.from - 1)
                 ),
                 $stmt[0]
             );
@@ -245,8 +245,8 @@ class Perl6::HookActions is Perl6::Actions {
                     $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                     ps_qast(),
                     $*W.add_string_constant(~$<wu>),
-                    $*W.add_numeric_constant('Int', $<wu>.from),
-                    $*W.add_numeric_constant('Int', $<xblock>
+                    $*W.add_numeric_constant($/, 'Int', $<wu>.from),
+                    $*W.add_numeric_constant($/, 'Int', $<xblock>
                         ?? $<xblock><pblock>.from - 1
                         !! $/.to)
                 ),
@@ -266,8 +266,8 @@ class Perl6::HookActions is Perl6::Actions {
                             $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                             ps_qast(),
                             $*W.add_string_constant('loop'),
-                            $*W.add_numeric_constant('Int', widen_expr_from($m[0])),
-                            $*W.add_numeric_constant('Int', widen_expr_to($m[0]))
+                            $*W.add_numeric_constant($/, 'Int', widen_expr_from($m[0])),
+                            $*W.add_numeric_constant($/, 'Int', widen_expr_to($m[0]))
                         ),
                         $m[0].ast
                     ));
@@ -321,8 +321,8 @@ class Perl6::HookActions is Perl6::Actions {
                     QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('statement_simple')) ),
                     $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
                     ps_qast(),
-                    $*W.add_numeric_constant('Int', $/.from),
-                    $*W.add_numeric_constant('Int', $/.to)
+                    $*W.add_numeric_constant($/, 'Int', $/.from),
+                    $*W.add_numeric_constant($/, 'Int', $/.to)
                 ),
                 $/.ast
             ));
