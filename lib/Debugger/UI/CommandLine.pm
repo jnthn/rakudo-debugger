@@ -8,11 +8,12 @@ my %sources;
 sub eval_in_ctx($ctx, $code) {
     ENTER $*DEBUG_HOOKS.suspend();
     LEAVE $*DEBUG_HOOKS.unsuspend();
-    my $compiler := pir::compreg__PS('perl6');
-    my $vm_ctx   := nqp::getattr(nqp::p6decont($ctx), PseudoStash, '$!ctx');
-    my $pbc      := $compiler.compile($code, :outer_ctx($vm_ctx), :global(GLOBAL));
-    nqp::atpos($pbc, 0).set_outer_ctx($vm_ctx);
-    $pbc();
+    my $compiler := nqp::getcomp('perl6');
+    my $vm_ctx   := nqp::getattr(nqp::decont($ctx), PseudoStash, '$!ctx');
+    my $comp'd   := nqp::findmethod($compiler, 'compile')($compiler,
+                        $code, :outer_ctx($vm_ctx), :global(GLOBAL));
+    nqp::forceouterctx($comp'd, $vm_ctx);
+    $comp'd();
 }
 
 # Represents a file that we're debugging.
@@ -692,7 +693,7 @@ sub thrown(|) {
 }
 
 # Override handler for uncaught exceptions.
-my Mu $p6comp := pir::compreg__Ps('perl6');
+my Mu $p6comp := nqp::getcomp('perl6');
 $p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> | {
     my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 1);
     pir::perl6_invoke_catchhandler__vPP(&unhandled, $vm_ex);
