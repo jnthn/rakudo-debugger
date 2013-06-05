@@ -538,9 +538,9 @@ my class DebugState {
                 }
                 when /^ 'tp' <.ws> 'show' [ <.ws> <p=&flpos> ]? $/ {
                     if $<p> {
-                        my $file = $<p>[0]<file> ?? ~$<p>[0]<file> !! $cur_file;
+                        my $file = $<p><file> ?? ~$<p><file> !! $cur_file;
                         if %tracepoints{self.normalize_filename($file)} -> @tps {
-                            if @tps.first(*.line == +$<p>[0]<line>) -> $tp {
+                            if @tps.first(*.line == +$<p><line>) -> $tp {
                                 self.render_one_tracepoint($tp);
                             }
                             else {
