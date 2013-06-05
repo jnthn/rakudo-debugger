@@ -64,13 +64,24 @@ class Perl6::HookRegexActions is Perl6::RegexActions {
                 QAST::Regex.new(
                     :rxtype('qastnode'),
                     :subtype('declarative'),
-                    QAST::Op.new(
-                        :op('call'),
-                        QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('regex_atom')) ),
-                        $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
-                        ps_qast(),
-                        $*W.add_numeric_constant($/, 'Int', $/.from),
-                        $*W.add_numeric_constant($/, 'Int', $/.to)
+                    QAST::Stmts.new(
+                        QAST::Op.new(
+                            :op('p6store'),
+                            QAST::Var.new( :name('$/'), :scope<lexical> ),
+                            QAST::Op.new(
+                                QAST::Var.new( :name('$¢'), :scope<lexical> ),
+                                :name('MATCH'),
+                                :op('callmethod')
+                            )
+                        ),
+                        QAST::Op.new(
+                            :op('call'),
+                            QAST::WVal.new( :value($*DEBUG_HOOKS.get_hook('regex_atom')) ),
+                            $*W.add_string_constant(pir::find_caller_lex__Ps('$?FILES') // '<unknown>'),
+                            ps_qast(),
+                            $*W.add_numeric_constant($/, 'Int', $/.from),
+                            $*W.add_numeric_constant($/, 'Int', $/.to)
+                        )
                     )
                 ),
                 $qa
