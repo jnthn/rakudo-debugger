@@ -429,6 +429,14 @@ my class DebugState {
                         }
                     }
                 }
+                when /^ ('$' [ \d+ | '<' \w+ '>' ]) \s* $/ {
+                    say ~eval_in_ctx($ctx, ~$0);
+                    CATCH {
+                        default {
+                            say colored($_.message, 'red');
+                        }
+                    }
+                }
                 when /^ (< $ @ % > .+ | 'self' .*)/ {
                     say eval_in_ctx($ctx, ~$0).perl;
                     CATCH {
