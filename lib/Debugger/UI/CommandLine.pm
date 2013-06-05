@@ -398,16 +398,6 @@ my class DebugState {
             'Cannot continue execution after an unhandled exception',
             'red');
     }
-    
-    sub prompt($msg) {
-        print $msg;
-        $*OUT.flush();
-        join "", gather loop {
-            my $c = $*IN.getc;
-            last if $c eq "\n";
-            take $c unless $c eq "\r";
-        }
-    }
 
     method issue_prompt($ctx, $cur_file, $from = 0, $to = 0) {
         ENTER $in_prompt = True;
