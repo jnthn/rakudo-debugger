@@ -415,6 +415,18 @@ class Perl6::HookGrammar is Perl6::Grammar {
             Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'semilist')(self)
         }
     }
+    
+    method comment:sym<#>() {
+        my $c := Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comment:sym<#>')(self);
+        my $comment := $c.MATCH.Str;
+        if $comment ~~ /'#?BREAK'/ {
+            if $*DEBUG_HOOKS.has_hook('new_breakpoint') {
+                my $file := pir::find_caller_lex__Ps('$?FILES') // '<unknown>';
+                $*DEBUG_HOOKS.get_hook('new_breakpoint')($file, $c.MATCH().from());
+            }
+        }
+        $c
+    }
 }
 
 sub hll-config($config) {

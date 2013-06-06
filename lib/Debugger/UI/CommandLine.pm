@@ -647,6 +647,10 @@ $*DEBUG_HOOKS.set_hook('regex_atom', -> $filename, $ctx, $from, $to {
 $*DEBUG_HOOKS.set_hook('reset', -> {
     DebugState.reset();
 });
+$*DEBUG_HOOKS.set_hook('new_breakpoint', -> $filename, $pos {
+    DebugState.add_breakpoint($filename,
+        %sources{$filename}.line_of($pos, -1, -1)[0] + 2);
+});
 
 # Allow interception of throwing an exception.
 my $IN_UNHANDLED = 0;
