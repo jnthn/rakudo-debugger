@@ -559,6 +559,22 @@ my class DebugState {
                     say self.usage()
                 }
                 when 'q' | 'quit' {
+                    my \ENDS := nqp::getcurhllsym('@END_PHASERS');
+                    if nqp::elems(ENDS) {
+                        my $end_prompt = colored('- ', self.prompt_color()) ~
+                            'Run END blocks (y/N)? ';
+                        if prompt($end_prompt) ~~ /:i ^ y/ {
+                            # Make sure we return to a sane state first.
+                            $run_mode  = Step;
+                            $dying     = False;
+                            $in_prompt = False;
+                            $cur_ex    = Nil;
+                        }
+                        else {
+                            # Remove end blocks so we don't run them on exit.
+                            nqp::bindcurhllsym('@END_PHASERS', nqp::list());
+                        }
+                    }
                     exit(0);
                 }
                 default {
