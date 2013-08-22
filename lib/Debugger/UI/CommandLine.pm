@@ -657,7 +657,7 @@ my $IN_UNHANDLED = 0;
 my $IN_THROWN = 0;
 my $CUR_EX;
 &EXCEPTION.wrap(-> | {
-    my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
+    my Mu $vm_ex := nqp::atpos(nqp::p6argvmarray(), 0);
     my $e = callsame;
     unless $IN_UNHANDLED || $IN_THROWN || DebugState.in_prompt {
         if DebugState.should_break_on_throw() {
@@ -697,12 +697,12 @@ sub thrown(|) {
 # Override handler for uncaught exceptions.
 my Mu $p6comp := nqp::getcomp('perl6');
 $p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> | {
-    my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 1);
+    my Mu $vm_ex := nqp::atpos(nqp::p6argvmarray(), 1);
     pir::perl6_invoke_catchhandler__vPP(&unhandled, $vm_ex);
 });
 sub unhandled(|) {
     $IN_UNHANDLED = 1;
-    my Mu $vm_ex := nqp::atpos(pir::perl6_current_args_rpa__P(), 0);
+    my Mu $vm_ex := nqp::atpos(nqp::p6argvmarray(), 0);
     my $e = EXCEPTION($vm_ex);
     my $bt = $e.backtrace();
     my $ctx = CALLER;
