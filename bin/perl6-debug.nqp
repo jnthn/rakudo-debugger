@@ -462,6 +462,7 @@ sub MAIN(@ARGS) {
     $comp.addstage('optimize', :before<post>);
     hll-config($comp.config);
     my $COMPILER_CONFIG := $comp.config;
+    nqp::bindhllsym('perl6', '$COMPILER_CONFIG', $comp.config);
     
     # Add extra command line options.
     my @clo := $comp.commandline_options();
