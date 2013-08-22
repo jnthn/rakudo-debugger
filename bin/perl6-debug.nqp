@@ -475,7 +475,7 @@ sub MAIN(@ARGS) {
     my @*MODULES := [];
     
     # Set up END block list, which we'll run at exit.
-    my @*END_PHASERS := [];
+    nqp::bindhllsym('perl6', '@END_PHASERS', []);
     
     # Force loading of the debugger module.
     my $pname := @ARGS.shift();
@@ -490,5 +490,8 @@ sub MAIN(@ARGS) {
     $comp.command_line(@ARGS, :encoding('utf8'), :transcode('ascii iso-8859-1'));
     
     # Run any END blocks before exiting.
-    for @*END_PHASERS { $_() }
+    for nqp::gethllsym('perl6', '@END_PHASERS') {
+        my $result := $_();
+        nqp::can($result, 'sink') && $result.sink();
+    }
 }
