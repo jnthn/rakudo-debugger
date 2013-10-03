@@ -258,7 +258,7 @@ my class DebugState {
     }
     
     method normalize_filename($file) {
-        if %sources.exists($file) {
+        if %sources{$file}:exists {
             return $file;
         }
         else {
@@ -696,7 +696,7 @@ sub thrown(|) {
             $fail = True;
             last;
         }
-        if %sources.exists(.file) {
+        if %sources{.file}:exists {
             $file = .file;
             $line = .line;
             last;
@@ -724,7 +724,7 @@ sub unhandled(|) {
     my $ctx = CALLER;
     my ($file, $line);
     for @$bt {
-        if %sources.exists(.file) {
+        if %sources{.file}:exists {
             $file = .file;
             $line = .line;
             last;
