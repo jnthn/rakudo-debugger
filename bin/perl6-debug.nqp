@@ -146,16 +146,18 @@ class Perl6::HookActions is Perl6::Actions {
     sub interesting_expr($e) {
         my $accept := 1;
         for $e.hash {
-            if %uninteresting{$_.key} {
+            my $key := $_.key;
+            my $value := $_.value;
+            if %uninteresting{$key} {
                 $accept := 0;
                 last;
             }
-            if $_.key eq 'scope_declarator' && $_.value<sym> eq 'has' {
+            if $key eq 'scope_declarator' && $value<sym> eq 'has' {
                 $accept := 0;
                 last;
             }
-            if $_.key eq 'scope_declarator' && $_.value<sym> eq 'my' || $_.value<sym> eq 'our' {
-                if $_.value<scoped><declarator> -> $decl {
+            if $key eq 'scope_declarator' && ($value<sym> eq 'my' || $value<sym> eq 'our') {
+                if $value<scoped><declarator> -> $decl {
                     # Skip plain, boring declarations with no assignment.
                     if $decl<variable_declarator> && !$decl<initializer> {
                         $accept := 0;
@@ -163,7 +165,7 @@ class Perl6::HookActions is Perl6::Actions {
                     }
                 }
             }
-            if $_.key eq 'circumfix' && $e<circumfix><pblock> {
+            if $key eq 'circumfix' && $e<circumfix><pblock> {
                 $accept := 0;
                 last;
             }
@@ -418,11 +420,13 @@ class Perl6::HookGrammar is Perl6::Grammar {
     
     method comment:sym<#>() {
         my $c := Perl6::Grammar.HOW.find_method(Perl6::Grammar, 'comment:sym<#>')(self);
-        my $comment := $c.MATCH.Str;
-        if $comment ~~ /'#?BREAK'/ {
-            if $*DEBUG_HOOKS.has_hook('new_breakpoint') {
-                my $file := nqp::getlexcaller('$?FILES') // '<unknown>';
-                $*DEBUG_HOOKS.get_hook('new_breakpoint')($file, $c.MATCH().from());
+        if $c {
+            my $comment := $c.MATCH.Str;
+            if $comment ~~ /'#?BREAK'/ {
+                if $*DEBUG_HOOKS.has_hook('new_breakpoint') {
+                    my $file := nqp::getlexcaller('$?FILES') // '<unknown>';
+                    $*DEBUG_HOOKS.get_hook('new_breakpoint')($file, $c.MATCH().from());
+                }
             }
         }
         $c
@@ -446,12 +450,9 @@ class Perl6::Debugger is Perl6::Compiler {
     }
 }
 
-sub MAIN(@ARGS) {
+sub MAIN(*@ARGS) {
     # Initialize dynops.
-    pir::rakudo_dynop_setup__v();
-
-    # Bump up Parrot's recursion limit
-    pir::getinterp__P().recursion_limit(100000);
+    nqp::p6init();
 
     # Create and configure compiler object.
     my $comp := Perl6::Debugger.new();
@@ -463,6 +464,9 @@ sub MAIN(@ARGS) {
     hll-config($comp.config);
     my $COMPILER_CONFIG := $comp.config;
     nqp::bindhllsym('perl6', '$COMPILER_CONFIG', $comp.config);
+    
+    # Bump up recursion limit, for VMs that have one.
+    $comp.recursion_limit(100000);
     
     # Add extra command line options.
     my @clo := $comp.commandline_options();
