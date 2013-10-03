@@ -451,6 +451,11 @@ class Perl6::Debugger is Perl6::Compiler {
 }
 
 sub MAIN(*@ARGS) {
+    # XXX Parrot compat hack.
+    if nqp::islist(@ARGS[0]) {
+        @ARGS := @ARGS[0];
+    }
+    
     # Initialize dynops.
     nqp::p6init();
 

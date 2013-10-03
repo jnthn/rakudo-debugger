@@ -679,7 +679,7 @@ my $CUR_EX;
         if DebugState.should_break_on_throw() {
             $IN_THROWN = 1;
             $CUR_EX = $e;
-            pir::perl6_invoke_catchhandler__vPP(&thrown, $vm_ex);
+            nqp::p6invokehandler(&thrown, $vm_ex);
             $IN_THROWN = 0;
         }
     }
@@ -714,7 +714,7 @@ sub thrown(|) {
 my Mu $p6comp := nqp::getcomp('perl6');
 $p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> | {
     my Mu $vm_ex := nqp::atpos(nqp::p6argvmarray(), 1);
-    pir::perl6_invoke_catchhandler__vPP(&unhandled, $vm_ex);
+    nqp::p6invokehandler(&unhandled, $vm_ex);
 });
 sub unhandled(|) {
     $IN_UNHANDLED = 1;
