@@ -594,7 +594,7 @@ my class DebugState {
             ('<enter>                single step, stepping into any calls' unless $dying),
             ('s                      step to next statement, stepping over any calls' unless $dying),
             ('so                     step out of the current routine' unless $dying),
-            ('r                      run until the next breakpoint or unhnadled exception' unless $dying),
+            ('r                      run until the next breakpoint or unhandled exception' unless $dying),
             ('rt                     run until the next breakpoint or an exception is thrown' unless $dying),
             's[ay], p[rint]         evaluate and display an expression in the current scope',
             'e[val]                 evaluate an expression in the current scope',
