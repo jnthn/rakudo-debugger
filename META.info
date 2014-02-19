@@ -1,7 +1,8 @@
 {
     "name"        : "Rakudo::Debugger",
     "version"     : "*",
-    "description" : "guess",
+    "description" : "Command-line debugger frontend for Rakudo",
     "depends"     : [ "Term::ANSIColor" ],
-    "source-url"  : "git://github.com/jnthn/rakudo-debugger.git"
+    "source-url"  : "git://github.com/jnthn/rakudo-debugger.git",
+    "provides"    : { "Debugger::UI::CommandLine": "lib/Debugger/UI/CommandLine.pm" }
 }
