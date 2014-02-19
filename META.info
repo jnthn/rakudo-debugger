@@ -1,5 +1,5 @@
 {
-    "name"        : "Rakudo::Debugger",
+    "name"        : "Debugger::UI::CommandLine",
     "version"     : "*",
     "description" : "Command-line debugger frontend for Rakudo",
     "depends"     : [ "Term::ANSIColor" ],
