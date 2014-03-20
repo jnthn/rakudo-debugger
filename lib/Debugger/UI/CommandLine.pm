@@ -692,7 +692,7 @@ sub thrown(|) {
     my ($file, $line);
     my $fail = False;
     for @$bt {
-        if .name eq '&fail' {
+        if .code.name eq '&fail' {
             $fail = True;
             last;
         }
