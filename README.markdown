@@ -1,13 +1,11 @@
-# A Debugger for Rakudo
+# A Command-line Frontend for Rakudo's Debugger
 
-This is an interactive, command-line debugger for Rakudo Perl 6. The easiest
-ways to get hold of it are:
+This is an command-line front-end for the Rakudo Debugger. When you build a current
+Rakudo Perl 6, you will get perl6-debug binaries that require this (or a compatible)
+module to be installed.
 
-* By installing a recent Rakudo Star distribution
-* By installing it with panda (panda install Rakudo::Debugger)
-
-To use it, just run your script with perl6-debug rather than perl6. It takes
-the same set of options as the normal perl6 executable, such as -I and -M.
+To use the debugger, just run your script with perl6-debug rather than perl6. It
+takes the same set of options as the normal perl6 executable, such as -I and -M.
 
 For information on available commands, type h then hit enter for the help
 screen once you're in the debugger. You may also like to see:
