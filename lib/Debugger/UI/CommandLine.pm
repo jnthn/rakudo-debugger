@@ -98,8 +98,8 @@ my class SourceFile {
         @lines.map: {
             state $line = 0;
             NEXT $line++;
-            my $safe_start_pos = [min] $start_line_pos, .chars - 1;
-            my $safe_end_pos   = [min] $end_line_pos, .chars - 1;
+            my $safe_start_pos = [min] $start_line_pos, .chars;
+            my $safe_end_pos   = [min] $end_line_pos, .chars;
             my $rendered       = colored('| ', 'blue');
             if $line == 0 && $line == @lines.end {
                 $rendered ~= .substr(0, $safe_start_pos);
