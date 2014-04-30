@@ -131,8 +131,10 @@ my class SourceFile {
             if $cur ~~ Cursor {
                 my $pos = $cur.pos;
                 my $str = $cur.target;
-                my $before = $str.substr(0, $pos).subst(/\n/, '\n', :g).subst(/\t/, '\t', :g);
-                my $after  = $str.substr($pos).subst(/\n/, '\n', :g).subst(/\t/, '\t', :g);
+                my $bfrom  = [max] 0, $pos - 77;
+                my $blen   = [min] 77, $pos;
+                my $before = $str.substr($bfrom, $blen).subst(/\n/, '\n', :g).subst(/\t/, '\t', :g);
+                my $after  = $str.substr($pos,     144).subst(/\n/, '\n', :g).subst(/\t/, '\t', :g);
                 if $before.chars + $after.chars > 77 {
                     if $after.chars > 43 {
                         $after = $after.substr(0, 40) ~ '...';
