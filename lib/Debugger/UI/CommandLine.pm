@@ -1,4 +1,4 @@
-module Debug::UI::CommandLine;
+unit module Debug::UI::CommandLine;
 
 use Term::ANSIColor;
 use nqp;
