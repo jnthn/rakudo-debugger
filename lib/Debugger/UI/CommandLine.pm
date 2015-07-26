@@ -59,7 +59,7 @@ my class SourceFile {
     
     method routine_containing($from_pos, $to_pos) {
         my @best = %!routine_regions.grep(
-                { $from_pos..$to_pos ~~ $^r.key }
+                { ($from_pos..$to_pos) ~~ $^r.key }
             ).sort(
                 { .key.max - .key.min }
             );
@@ -127,7 +127,7 @@ my class SourceFile {
     }
     
     method regex_match_status($from, $to, $ctx) {
-        if $from..$to ~~ any(@!regex_regions) {
+        if ($from..$to) ~~ any(@!regex_regions) {
             my $cur = try eval_in_ctx($ctx, q[DYNAMIC::<$¢>]);
             if $cur ~~ Cursor {
                 my $pos = $cur.pos;
@@ -304,7 +304,7 @@ my class DebugState {
         if %breakpoints{$filename} -> @bp_lines {
             my ($from_line, $) = %sources{$filename}.line_of($from, -1, -1);
             my ($to_line, $)   = %sources{$filename}.line_of($to, -1, -1);
-            return any(@bp_lines) ~~ $from_line..$to_line;
+            return any(@bp_lines) ~~ ($from_line..$to_line);
         }
     }
     
@@ -321,7 +321,7 @@ my class DebugState {
         if %tracepoints{$filename} -> @tps {
             my ($from_line, $) = %sources{$filename}.line_of($from, -1, -1);
             my ($to_line, $)   = %sources{$filename}.line_of($to, -1, -1);
-            @tps.grep({ $^tp.line - 1 ~~ $from_line..$to_line })>>.hit($ctx);
+            @tps.grep({ $^tp.line - 1 ~~ ($from_line..$to_line) })>>.hit($ctx);
         }
     }
     
