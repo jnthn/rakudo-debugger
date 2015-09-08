@@ -1,5 +1,6 @@
 unit module Debug::UI::CommandLine;
 
+use nqp;
 use Term::ANSIColor;
 use nqp;
 
