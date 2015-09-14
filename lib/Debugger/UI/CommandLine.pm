@@ -1,7 +1,7 @@
 unit module Debug::UI::CommandLine;
 
 use nqp;
-use Term::ANSIColor;
+use Terminal::ANSIColor;
 use nqp;
 
 # The source code of the files we've encountred while debugging.
