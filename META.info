@@ -2,7 +2,7 @@
     "name"        : "Debugger::UI::CommandLine",
     "version"     : "*",
     "description" : "Command-line debugger frontend for Rakudo",
-    "depends"     : [ "Term::ANSIColor" ],
+    "depends"     : [ "Terminal::ANSIColor" ],
     "source-url"  : "git://github.com/jnthn/rakudo-debugger.git",
     "provides"    : { "Debugger::UI::CommandLine": "lib/Debugger/UI/CommandLine.pm" }
 }
