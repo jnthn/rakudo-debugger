@@ -4,7 +4,7 @@ use nqp;
 use Terminal::ANSIColor;
 use nqp;
 
-# The source code of the files we've encountred while debugging.
+# The source code of the files we've encountered while debugging.
 my %sources;
 
 sub eval_in_ctx($ctx, $code) {
