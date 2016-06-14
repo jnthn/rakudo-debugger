@@ -1,6 +1,6 @@
 # A Command-line Frontend for Rakudo's Debugger
 
-This is an command-line front-end for the Rakudo Debugger. When you build a current
+This is a command-line front-end for the Rakudo Debugger. When you build a current
 Rakudo Perl 6, you will get perl6-debug binaries that require this (or a compatible)
 module to be installed.
 
