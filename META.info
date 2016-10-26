@@ -1,4 +1,5 @@
 {
+    "perl"        : "6.*",
     "name"        : "Debugger::UI::CommandLine",
     "version"     : "*",
     "description" : "Command-line debugger frontend for Rakudo",
