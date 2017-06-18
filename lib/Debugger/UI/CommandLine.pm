@@ -683,7 +683,7 @@ my $CUR_EX;
         if DebugState.should_break_on_throw() {
             $IN_THROWN = 1;
             $CUR_EX = $e;
-            nqp::call(&thrown, $vm_ex);
+            $ = nqp::call(&thrown, $vm_ex);
             $IN_THROWN = 0;
         }
     }
