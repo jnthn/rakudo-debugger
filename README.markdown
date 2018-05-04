@@ -4,7 +4,7 @@ This is a command-line front-end for the Rakudo Debugger. When you build a curre
 Rakudo Perl 6, you will get perl6-debug binaries that require this (or a compatible)
 module to be installed.
 
-To use the debugger, just run your script with perl6-debug rather than perl6. It
+To use the debugger, just run your script with perl6-debug or perl6-debug-m rather than perl6. It
 takes the same set of options as the normal perl6 executable, such as -I and -M.
 
 For information on available commands, type h then hit enter for the help
