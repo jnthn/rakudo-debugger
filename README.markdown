@@ -1,5 +1,13 @@
 # A Command-line Frontend for Rakudo's Debugger
 
+**Before you use this:** this debugger UI, and the interanls it drives, have been
+superseded by the new MoarVM Remote Debug support. There are both [GUI](https://commaide.com/)
+and [command line](https://github.com/edumentab/p6-app-moarvm-debug) clients for it.
+It's unlikely this debugger interface will be further developed, and in time the API it
+draws on will likely be deprecated. This module was what I had time and resources to make
+happen when I did it. The VM-backed remote debug support that was since implemented is far
+better; it handles threads properly, can trace into the internals, etc.
+
 This is a command-line front-end for the Rakudo Debugger. When you build a current
 Rakudo Perl 6, you will get perl6-debug binaries that require this (or a compatible)
 module to be installed.
