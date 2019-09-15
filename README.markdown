@@ -1,6 +1,6 @@
 # A Command-line Frontend for Rakudo's Debugger
 
-**Before you use this:** this debugger UI, and the interanls it drives, have been
+**Before you use this:** this debugger UI, and the internals it drives, have been
 superseded by the new MoarVM Remote Debug support. There are both [GUI](https://commaide.com/)
 and [command line](https://github.com/edumentab/p6-app-moarvm-debug) clients for it.
 It's unlikely this debugger interface will be further developed, and in time the API it
