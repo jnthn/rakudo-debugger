@@ -10,7 +10,7 @@ my %sources;
 sub eval_in_ctx($ctx, $code) {
     ENTER $*DEBUG_HOOKS.suspend();
     LEAVE $*DEBUG_HOOKS.unsuspend();
-    my $compiler := nqp::getcomp('perl6');
+    my $compiler := nqp::getcomp('Raku') // nqp::getcomp('perl6');
     my $vm_ctx   := nqp::getattr(nqp::decont($ctx), PseudoStash, '$!ctx');
     my $comp'd   := nqp::findmethod($compiler, 'compile')($compiler,
                         $code, :outer_ctx($vm_ctx), :global(GLOBAL));
@@ -715,7 +715,7 @@ sub thrown(|) {
 }
 
 # Override handler for uncaught exceptions.
-my Mu $p6comp := nqp::getcomp('perl6');
+my Mu $p6comp := nqp::getcomp('Raku') // nqp::getcomp('perl6');
 $p6comp.HOW.find_method($p6comp, 'handle-exception').wrap(-> | {
     my Mu $vm_ex := nqp::atpos(nqp::p6argvmarray(), 1);
     nqp::call(&unhandled, $vm_ex);
